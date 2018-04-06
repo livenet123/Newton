@@ -1,5 +1,4 @@
 
-
 -= Building Newton =-
 
 On *nix:
@@ -25,10 +24,12 @@ http://www.microsoft.com/
 http://www.cmake.org/
 http://www.boost.org/
 
+
 To build, change to a directory where this file is located, and run this commands: 
 mkdir build
 cd build
 cmake -G "Visual Studio 12 Win64" ..
 
 And then do Build.
+
 Good luck!
