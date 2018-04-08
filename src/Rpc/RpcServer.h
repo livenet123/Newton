@@ -38,7 +38,7 @@ public:
   typedef std::function<bool(RpcServer*, const HttpRequest& request, HttpResponse& response)> HandlerFunction;
   bool enableCors(const std::vector<std::string>  domains);
   //std::vector<std::string> getCorsDomains();
-  std::vector<std::__cxx11::string> getCorsDomains();
+  std::vector<std::string> getCorsDomains();
 
 private:
 
