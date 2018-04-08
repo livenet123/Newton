@@ -1,0 +1,33 @@
+sudo: true
+language: cpp
+compiler: gcc
+env:
+- CXXFLAGS="-std=gnu++11"
+matrix:
+  include:
+  - os: linux
+    addons:
+      apt:
+        sources:
+        - ubuntu-toolchain-r-test
+        packages:
+        - g++-4.9
+        - libboost1.59-all-dev
+    env:
+    - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9
+  - os: osx
+before_install:
+- if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get update -q                            ;
+  fi
+install:
+- if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install librocksdb-dev
+  -y            ; fi
+script:
+- mkdir build && cd build
+- cmake -DCMAKE_BUILD_TYPE=Release -DSTATIC=true .. && make
+before_deploy:
+- cd src
+- mkdir Newton-${TRAVIS_TAG}
+- mv newtond miner simplewallet walletd connectivity_tool Newton-${TRAVIS_TAG}/
+- tar cvfz Newton-${TRAVIS_TAG}-${TRAVIS_OS_NAME}.tar.gz Newton-${TRAVIS_TAG}/
+
