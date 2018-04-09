@@ -43,7 +43,7 @@ if(MSVC)
   include_directories(SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/src/platform/msc)
 else()
   if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
-    # This option has no effect in glibc version less than 2.20. 
+    # This option has no effect in glibc version less than 2.20.
     # Since glibc 2.20 _BSD_SOURCE is deprecated, this macro is recomended instead
     add_definitions("-D_DEFAULT_SOURCE -D_GNU_SOURCE")
   endif()
@@ -53,7 +53,7 @@ else()
   else()
     set(ARCH_FLAG "-march=${ARCH}")
   endif()
-  set(WARNINGS "-Wall -Wextra -Wpointer-arith -Wundef -Wvla -Wwrite-strings -Werror -Wno-error=extra -Wno-error=unused-function -Wno-error=deprecated-declarations -Wno-error=sign-compare -Wno-error=strict-aliasing -Wno-error=type-limits -Wno-unused-parameter -Wno-error=unused-variable -Wno-error=undef -Wno-error=uninitialized -Wno-error=unused-result")
+  set(WARNINGS "-Wall -Wextra -Wpointer-arith -Wundef -Wvla -Wwrite-strings -Wno-error=extra -Wno-error=unused-function -Wno-error=deprecated-declarations -Wno-error=sign-compare -Wno-error=strict-aliasing -Wno-error=type-limits -Wno-unused-parameter -Wno-error=unused-variable -Wno-error=undef -Wno-error=uninitialized -Wno-error=unused-result")
   if(CMAKE_C_COMPILER_ID STREQUAL "Clang")
     set(WARNINGS "${WARNINGS} -Wno-error=mismatched-tags -Wno-error=null-conversion -Wno-overloaded-shift-op-parentheses -Wno-error=shift-count-overflow -Wno-error=tautological-constant-out-of-range-compare -Wno-error=unused-private-field -Wno-error=unneeded-internal-declaration -Wno-error=unused-function -Wno-error=missing-braces")
   else()
@@ -87,7 +87,7 @@ else()
   set(RELEASE_FLAGS "-Ofast -DNDEBUG -Wno-unused-variable")
   if(NOT APPLE)
     # There is a clang bug that does not allow to compile code that uses AES-NI intrinsics if -flto is enabled
-    if (CMAKE_C_COMPILER_ID STREQUAL "GNU" AND CMAKE_SYSTEM_NAME STREQUAL "Linux" 
+    if (CMAKE_C_COMPILER_ID STREQUAL "GNU" AND CMAKE_SYSTEM_NAME STREQUAL "Linux"
         AND CMAKE_BUILD_TYPE STREQUAL "Release" AND ((CMAKE_C_COMPILER_VERSION VERSION_GREATER 4.9) OR (CMAKE_C_COMPILER_VERSION VERSION_EQUAL 4.9)))
       # On linux, to build in lto mode, check that ld.gold linker is used: 'update-alternatives --install /usr/bin/ld ld /usr/bin/ld.gold HIGHEST_PRIORITY'
       set(CMAKE_AR gcc-ar)
@@ -108,6 +108,10 @@ else()
 endif()
 
 if(STATIC)
+  set(Boost_USE_STATIC_LIBS ON)
+  set(Boost_USE_STATIC_RUNTIME ON)
+endif()
+if(APPLE)
   set(Boost_USE_STATIC_LIBS ON)
   set(Boost_USE_STATIC_RUNTIME ON)
 endif()
