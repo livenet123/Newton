@@ -21,7 +21,7 @@ before_install:
   -y    ; fi
 - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get update -q                            ;
   fi
-- chmod +x external/rocksdb/build_detect_platform
+- chmod +x external/rocksdb/build_tools/build_detect_platform
 install:
 - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install librocksdb-dev
   -y            ; fi
