@@ -12,7 +12,7 @@ matrix:
         - ubuntu-toolchain-r-test
         packages:
         - g++-4.9
-        - libboost1.59-all-dev
+        - libboost1.55-all-dev
     env:
     - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9
   - os: osx
@@ -30,4 +30,3 @@ before_deploy:
 - mkdir Newton-${TRAVIS_TAG}
 - mv newtond miner simplewallet walletd connectivity_tool Newton-${TRAVIS_TAG}/
 - tar cvfz Newton-${TRAVIS_TAG}-${TRAVIS_OS_NAME}.tar.gz Newton-${TRAVIS_TAG}/
-
