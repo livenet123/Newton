@@ -25,7 +25,7 @@ install:
 - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install librocksdb-dev
   -y            ; fi
 script:
-- chmod +x external/rocksdb/build_detect_platform  
+- chmod +x livenet123/Newton/external/rocksdb/build_detect_platform  
 - mkdir build && cd build
 - cmake -DCMAKE_BUILD_TYPE=Release -DSTATIC=true .. && make
 before_deploy:
