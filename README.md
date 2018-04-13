@@ -1,7 +1,7 @@
 
 -= Building Newton =-
 
-On *nix:
+**On *nix:**
 
 Dependencies: GCC 4.9 or later, CMake 2.8.6 or later, and Boost 1.55.
 You may download them from:
@@ -10,7 +10,7 @@ http://www.cmake.org/
 http://www.boost.org/
 Alternatively, it may be possible to install them using a package manager.
 
-## Run these commands
+#### Run these commands
 
 ```
 git clone https://github.com/livenet123/Newton.git
@@ -24,7 +24,7 @@ cmake -DCMAKE_BUILD_TYPE=Release -DSTATIC=true .. && make
 
 The resulting executables can be found in build/release/src.
 
-Advanced options:
+#### Advanced options:
 Parallel build: run `make -j<number of threads>' instead of `make'.
 Debug build: run `make build-debug'.
 Test suite: run `make test-release' to run tests in addition to building. Running `make test-debug' will do the same to the debug version.
