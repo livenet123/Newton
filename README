@@ -12,7 +12,20 @@ http://www.cmake.org/
 http://www.boost.org/
 Alternatively, it may be possible to install them using a package manager.
 
-To build, change to a directory where this file is located, and run `make'. The resulting executables can be found in build/release/src.
+## Run these commands
+
+```
+git clone https://github.com/livenet123/Newton.git
+export CXXFLAGS="-std=gnu++11"
+cd Newton
+chmod +x external/rocksdb/build_tools/build_detect_platform
+chmod +x external/rocksdb/build_tools/version.sh
+mkdir build && cd build
+cmake -DCMAKE_BUILD_TYPE=Release -DSTATIC=true .. && make
+
+```
+
+The resulting executables can be found in build/release/src.
 
 Advanced options:
 Parallel build: run `make -j<number of threads>' instead of `make'.
