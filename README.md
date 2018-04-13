@@ -38,7 +38,7 @@ make -j<number of threads>
 ```
 #### Debug build: run 
 ```
-`make build-debug'
+make build-debug
 ```
 #### Test suite: run 
 ```
@@ -47,9 +47,9 @@ make test-release
 to run tests in addition to building. Running `make test-debug' will do the same to the debug version.
 
 #### Building with Clang:
-it may be possible to use Clang instead of GCC, but this may not work everywhere. To build, run 
+it may be possible to use Clang instead of GCC, but this may not work everywhere. To build, before running `make' run 
 ```
-`export CC=clang CXX=clang++' before running `make'.
+export CC=clang CXX=clang++ 
 ```
 
 ### On Windows:
