@@ -22,7 +22,6 @@ chmod +x external/rocksdb/build_tools/build_detect_platform
 chmod +x external/rocksdb/build_tools/version.sh
 mkdir build && cd build
 cmake -DCMAKE_BUILD_TYPE=Release -DSTATIC=true .. && make
-
 ```
 
 The resulting executables can be found in build/release/src.
