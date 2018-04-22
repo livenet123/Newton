@@ -3,7 +3,7 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/7dg9qrptema5q9ar/branch/master?svg=true)](https://ci.appveyor.com/project/livenet123/newton-awyxq/branch/master)
 
 
-## Building Newton 
+## Building Newton
 
 ### On *nix:
 
@@ -31,25 +31,25 @@ cmake -DCMAKE_BUILD_TYPE=Release -DSTATIC=true .. && make
 The resulting executables can be found in build/release/src.
 
 #### Advanced options:
-Parallel build: instead of `make' run 
+Parallel build: instead of `make' run
 
 ```
 make -j<number of threads>
 ```
-#### Debug build: run 
+#### Debug build: run
 ```
 make build-debug
 ```
-#### Test suite: run 
+#### Test suite: run
 ```
 make test-release
 ```
 to run tests in addition to building. Running `make test-debug' will do the same to the debug version.
 
 #### Building with Clang:
-it may be possible to use Clang instead of GCC, but this may not work everywhere. To build, before running `make' run 
+it may be possible to use Clang instead of GCC, but this may not work everywhere. To build, before running `make' run
 ```
-export CC=clang CXX=clang++ 
+export CC=clang CXX=clang++
 ```
 
 ### On Windows:
