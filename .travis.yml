@@ -34,6 +34,7 @@ before_deploy:
 - mkdir Newton-${TRAVIS_TAG}
 - mv Newtond miner simplewallet walletd connectivity_tool Newton-${TRAVIS_TAG}/
 - tar cvfz Newton-${TRAVIS_TAG}-${TRAVIS_OS_NAME}.tar.gz Newton-${TRAVIS_TAG}/
+- git tag "$(date +'%Y%m%d%H%M%S')-$(git log --format=%h -1)"
 deploy:
   provider: releases
   api_key:
