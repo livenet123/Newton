@@ -25,7 +25,7 @@ using namespace CryptoNote;
 
 namespace
 {
-  const uint64_t TEST_GRANTED_FULL_REWARD_ZONE = 10000;
+  const uint64_t TEST_GRANTED_FULL_REWARD_ZONE = 100000;
   const uint64_t TEST_MONEY_SUPPLY = static_cast<uint64_t>(-1);
   const uint64_t TEST_EMISSION_SPEED_FACTOR = 18;
 

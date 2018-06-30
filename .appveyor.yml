@@ -7,5 +7,5 @@ environment:
 build_script:
     - md build
     - cd build
-    - cmake -G "Visual Studio 15 Win64" ..
-    - MSBuild Bytecoin.sln /p:Configuration=Release /m
+    - cmake -G "Visual Studio 15 Win64" -DCMAKE_BUILD_TYPE=Release ..
+    - MSBuild Newton.sln /p:Configuration=Release /m

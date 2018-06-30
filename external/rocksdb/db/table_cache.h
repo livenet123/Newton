@@ -1,7 +1,7 @@
 //  Copyright (c) 2011-present, Facebook, Inc.  All rights reserved.
-//  This source code is licensed under the BSD-style license found in the
-//  LICENSE file in the root directory of this source tree. An additional grant
-//  of patent rights can be found in the PATENTS file in the same directory.
+//  This source code is licensed under both the GPLv2 (found in the
+//  COPYING file in the root directory) and Apache 2.0 License
+//  (found in the LICENSE.Apache file in the root directory).
 //
 // Copyright (c) 2011 The LevelDB Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
@@ -15,11 +15,13 @@
 #include <stdint.h>
 
 #include "db/dbformat.h"
+#include "db/range_del_aggregator.h"
+#include "options/cf_options.h"
 #include "port/port.h"
 #include "rocksdb/cache.h"
 #include "rocksdb/env.h"
-#include "rocksdb/table.h"
 #include "rocksdb/options.h"
+#include "rocksdb/table.h"
 #include "table/table_reader.h"
 
 namespace rocksdb {
@@ -44,25 +46,41 @@ class TableCache {
   // the returned iterator.  The returned "*tableptr" object is owned by
   // the cache and should not be deleted, and is valid for as long as the
   // returned iterator is live.
+  // @param range_del_agg If non-nullptr, adds range deletions to the
+  //    aggregator. If an error occurs, returns it in a NewErrorInternalIterator
   // @param skip_filters Disables loading/accessing the filter block
   // @param level The level this table is at, -1 for "not set / don't know"
   InternalIterator* NewIterator(
       const ReadOptions& options, const EnvOptions& toptions,
       const InternalKeyComparator& internal_comparator,
-      const FileDescriptor& file_fd, TableReader** table_reader_ptr = nullptr,
+      const FileDescriptor& file_fd, RangeDelAggregator* range_del_agg,
+      const SliceTransform* prefix_extractor = nullptr,
+      TableReader** table_reader_ptr = nullptr,
       HistogramImpl* file_read_hist = nullptr, bool for_compaction = false,
       Arena* arena = nullptr, bool skip_filters = false, int level = -1);
+
+  InternalIterator* NewRangeTombstoneIterator(
+      const ReadOptions& options, const EnvOptions& toptions,
+      const InternalKeyComparator& internal_comparator,
+      const FileDescriptor& file_fd, HistogramImpl* file_read_hist,
+      bool skip_filters, int level,
+      const SliceTransform* prefix_extractor = nullptr);
 
   // If a seek to internal key "k" in specified file finds an entry,
   // call (*handle_result)(arg, found_key, found_value) repeatedly until
   // it returns false.
+  // @param get_context State for get operation. If its range_del_agg() returns
+  //    non-nullptr, adds range deletions to the aggregator. If an error occurs,
+  //    returns non-ok status.
   // @param skip_filters Disables loading/accessing the filter block
   // @param level The level this table is at, -1 for "not set / don't know"
   Status Get(const ReadOptions& options,
              const InternalKeyComparator& internal_comparator,
              const FileDescriptor& file_fd, const Slice& k,
-             GetContext* get_context, HistogramImpl* file_read_hist = nullptr,
-             bool skip_filters = false, int level = -1);
+             GetContext* get_context,
+             const SliceTransform* prefix_extractor = nullptr,
+             HistogramImpl* file_read_hist = nullptr, bool skip_filters = false,
+             int level = -1);
 
   // Evict any entry for the specified file number
   static void Evict(Cache* cache, uint64_t file_number);
@@ -77,6 +95,7 @@ class TableCache {
   Status FindTable(const EnvOptions& toptions,
                    const InternalKeyComparator& internal_comparator,
                    const FileDescriptor& file_fd, Cache::Handle**,
+                   const SliceTransform* prefix_extractor = nullptr,
                    const bool no_io = false, bool record_read_stats = true,
                    HistogramImpl* file_read_hist = nullptr,
                    bool skip_filters = false, int level = -1,
@@ -95,6 +114,7 @@ class TableCache {
                             const InternalKeyComparator& internal_comparator,
                             const FileDescriptor& file_meta,
                             std::shared_ptr<const TableProperties>* properties,
+                            const SliceTransform* prefix_extractor = nullptr,
                             bool no_io = false);
 
   // Return total memory usage of the table reader of the file.
@@ -102,10 +122,15 @@ class TableCache {
   size_t GetMemoryUsageByTableReader(
       const EnvOptions& toptions,
       const InternalKeyComparator& internal_comparator,
-      const FileDescriptor& fd);
+      const FileDescriptor& fd,
+      const SliceTransform* prefix_extractor = nullptr);
 
   // Release the handle from a cache
   void ReleaseHandle(Cache::Handle* handle);
+
+  // Capacity of the backing Cache that indicates inifinite TableCache capacity.
+  // For example when max_open_files is -1 we set the backing Cache to this.
+  static const int kInfiniteCapacity = 0x400000;
 
  private:
   // Build a table reader
@@ -115,8 +140,10 @@ class TableCache {
                         size_t readahead, bool record_read_stats,
                         HistogramImpl* file_read_hist,
                         unique_ptr<TableReader>* table_reader,
+                        const SliceTransform* prefix_extractor = nullptr,
                         bool skip_filters = false, int level = -1,
-                        bool prefetch_index_and_filter_in_cache = true);
+                        bool prefetch_index_and_filter_in_cache = true,
+                        bool for_compaction = false);
 
   const ImmutableCFOptions& ioptions_;
   const EnvOptions& env_options_;

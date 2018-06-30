@@ -21,14 +21,12 @@ before_install:
   -y    ; fi
 - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get update -q                            ;
   fi
-- chmod +x external/rocksdb/build_tools/build_detect_platform
-- chmod +x external/rocksdb/build_tools/version.sh
 install:
 - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install librocksdb-dev
   -y            ; fi
 script:
 - mkdir build && cd build
-- cmake -DCMAKE_BUILD_TYPE=Release -DSTATIC=true .. && make
+- cmake -DCMAKE_BUILD_TYPE=Release .. && make
 before_deploy:
 - cd src
 - mkdir Newton-${TRAVIS_TAG}
