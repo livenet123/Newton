@@ -456,7 +456,6 @@ PosixMmapReadableFile::~PosixMmapReadableFile() {
     fprintf(stdout, "failed to munmap %p length %" ROCKSDB_PRIszt " \n",
             mmapped_region_, length_);
   }
-  close(fd_);
 }
 
 Status PosixMmapReadableFile::Read(uint64_t offset, size_t n, Slice* result,
@@ -1055,7 +1054,7 @@ Status PosixRandomRWFile::Close() {
 
 PosixMemoryMappedFileBuffer::~PosixMemoryMappedFileBuffer() {
   // TODO should have error handling though not much we can do...
-  munmap(this->base_, length_);
+  munmap(this->base, length);
 }
 
 /*

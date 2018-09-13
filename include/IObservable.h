@@ -1,5 +1,4 @@
 // Copyright (c) 2012-2017, The CryptoNote developers, The Bytecoin developers
-//
 // This file is part of Bytecoin.
 //
 // Bytecoin is free software: you can redistribute it and/or modify

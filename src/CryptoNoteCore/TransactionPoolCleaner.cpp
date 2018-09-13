@@ -81,6 +81,7 @@ std::vector<Crypto::Hash> TransactionPoolCleanWrapper::getTransactionHashesByPay
   return transactionPool->getTransactionHashesByPaymentId(paymentId);
 }
 
+
 std::vector<Crypto::Hash> TransactionPoolCleanWrapper::clean() {
   try {
     uint64_t currentTime = timeProvider->now();

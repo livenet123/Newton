@@ -45,7 +45,6 @@ extern void TestKillRandom(std::string kill_point, int odds,
 #define TEST_SYNC_POINT(x)
 #define TEST_IDX_SYNC_POINT(x, index)
 #define TEST_SYNC_POINT_CALLBACK(x, y)
-#define INIT_SYNC_POINT_SINGLETONS()
 #else
 
 namespace rocksdb {
@@ -135,6 +134,4 @@ class SyncPoint {
   rocksdb::SyncPoint::GetInstance()->Process(x + std::to_string(index))
 #define TEST_SYNC_POINT_CALLBACK(x, y) \
   rocksdb::SyncPoint::GetInstance()->Process(x, y)
-#define INIT_SYNC_POINT_SINGLETONS() \
-  (void)rocksdb::SyncPoint::GetInstance();
 #endif  // NDEBUG

@@ -145,10 +145,6 @@ extern ROCKSDB_LIBRARY_API rocksdb_backup_engine_t* rocksdb_backup_engine_open(
 extern ROCKSDB_LIBRARY_API void rocksdb_backup_engine_create_new_backup(
     rocksdb_backup_engine_t* be, rocksdb_t* db, char** errptr);
 
-extern ROCKSDB_LIBRARY_API void rocksdb_backup_engine_create_new_backup_flush(
-    rocksdb_backup_engine_t* be, rocksdb_t* db, unsigned char flush_before_backup,
-    char** errptr);
-
 extern ROCKSDB_LIBRARY_API void rocksdb_backup_engine_purge_old_backups(
     rocksdb_backup_engine_t* be, uint32_t num_backups_to_keep, char** errptr);
 
@@ -158,10 +154,6 @@ extern ROCKSDB_LIBRARY_API void rocksdb_restore_options_destroy(
     rocksdb_restore_options_t* opt);
 extern ROCKSDB_LIBRARY_API void rocksdb_restore_options_set_keep_log_files(
     rocksdb_restore_options_t* opt, int v);
-
-extern ROCKSDB_LIBRARY_API void
-rocksdb_backup_engine_verify_backup(rocksdb_backup_engine_t* be,
-    uint32_t backup_id, char** errptr);
 
 extern ROCKSDB_LIBRARY_API void
 rocksdb_backup_engine_restore_db_from_latest_backup(
@@ -1235,9 +1227,6 @@ extern ROCKSDB_LIBRARY_API void rocksdb_compactoptions_destroy(
 extern ROCKSDB_LIBRARY_API void
 rocksdb_compactoptions_set_exclusive_manual_compaction(
     rocksdb_compactoptions_t*, unsigned char);
-extern ROCKSDB_LIBRARY_API void
-rocksdb_compactoptions_set_bottommost_level_compaction(
-    rocksdb_compactoptions_t*, unsigned char);
 extern ROCKSDB_LIBRARY_API void rocksdb_compactoptions_set_change_level(
     rocksdb_compactoptions_t*, unsigned char);
 extern ROCKSDB_LIBRARY_API void rocksdb_compactoptions_set_target_level(
@@ -1310,8 +1299,6 @@ extern ROCKSDB_LIBRARY_API void rocksdb_sstfilewriter_delete(
     char** errptr);
 extern ROCKSDB_LIBRARY_API void rocksdb_sstfilewriter_finish(
     rocksdb_sstfilewriter_t* writer, char** errptr);
-extern ROCKSDB_LIBRARY_API void rocksdb_sstfilewriter_file_size(
-    rocksdb_sstfilewriter_t* writer, uint64_t* file_size);
 extern ROCKSDB_LIBRARY_API void rocksdb_sstfilewriter_destroy(
     rocksdb_sstfilewriter_t* writer);
 

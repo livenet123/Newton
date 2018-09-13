@@ -100,13 +100,13 @@ DEFINE_string(
     "readreverse,"
     "compact,"
     "compactall,"
+    "readrandom,"
     "multireadrandom,"
     "readseq,"
     "readtocache,"
     "readreverse,"
     "readwhilewriting,"
     "readwhilemerging,"
-    "readwhilescanning,"
     "readrandomwriterandom,"
     "updaterandom,"
     "xorupdaterandom,"
@@ -149,8 +149,6 @@ DEFINE_string(
     "reads\n"
     "\treadwhilemerging      -- 1 merger, N threads doing random "
     "reads\n"
-    "\treadwhilescanning     -- 1 thread doing full table scan, "
-    "N threads doing random reads\n"
     "\treadrandomwriterandom -- N threads doing random-read, "
     "random-write\n"
     "\tupdaterandom  -- N threads doing read-modify-write for random "
@@ -435,11 +433,6 @@ DEFINE_bool(pin_l0_filter_and_index_blocks_in_cache, false,
 DEFINE_int32(block_size,
              static_cast<int32_t>(rocksdb::BlockBasedTableOptions().block_size),
              "Number of bytes in a block.");
-
-DEFINE_int32(
-    format_version,
-    static_cast<int32_t>(rocksdb::BlockBasedTableOptions().format_version),
-    "Format version of SST files.");
 
 DEFINE_int32(block_restart_interval,
              rocksdb::BlockBasedTableOptions().block_restart_interval,
@@ -1946,37 +1939,36 @@ class Benchmark {
     return true;
   }
 
-  inline bool CompressSlice(const CompressionContext& compression_ctx,
-                            const Slice& input, std::string* compressed) {
+  inline bool CompressSlice(const Slice& input, std::string* compressed) {
     bool ok = true;
     switch (FLAGS_compression_type_e) {
       case rocksdb::kSnappyCompression:
-        ok = Snappy_Compress(compression_ctx, input.data(), input.size(),
-                             compressed);
+        ok = Snappy_Compress(Options().compression_opts, input.data(),
+                             input.size(), compressed);
         break;
       case rocksdb::kZlibCompression:
-        ok = Zlib_Compress(compression_ctx, 2, input.data(), input.size(),
-                           compressed);
+        ok = Zlib_Compress(Options().compression_opts, 2, input.data(),
+                           input.size(), compressed);
         break;
       case rocksdb::kBZip2Compression:
-        ok = BZip2_Compress(compression_ctx, 2, input.data(), input.size(),
-                            compressed);
+        ok = BZip2_Compress(Options().compression_opts, 2, input.data(),
+                            input.size(), compressed);
         break;
       case rocksdb::kLZ4Compression:
-        ok = LZ4_Compress(compression_ctx, 2, input.data(), input.size(),
-                          compressed);
+        ok = LZ4_Compress(Options().compression_opts, 2, input.data(),
+                          input.size(), compressed);
         break;
       case rocksdb::kLZ4HCCompression:
-        ok = LZ4HC_Compress(compression_ctx, 2, input.data(), input.size(),
-                            compressed);
+        ok = LZ4HC_Compress(Options().compression_opts, 2, input.data(),
+                            input.size(), compressed);
         break;
       case rocksdb::kXpressCompression:
         ok = XPRESS_Compress(input.data(),
           input.size(), compressed);
         break;
       case rocksdb::kZSTD:
-        ok = ZSTD_Compress(compression_ctx, input.data(), input.size(),
-                           compressed);
+        ok = ZSTD_Compress(Options().compression_opts, input.data(),
+                           input.size(), compressed);
         break;
       default:
         ok = false;
@@ -2058,10 +2050,7 @@ class Benchmark {
       const int len = FLAGS_block_size;
       std::string input_str(len, 'y');
       std::string compressed;
-      CompressionContext compression_ctx(FLAGS_compression_type_e,
-                                         Options().compression_opts);
-      bool result =
-          CompressSlice(compression_ctx, Slice(input_str), &compressed);
+      bool result = CompressSlice(Slice(input_str), &compressed);
 
       if (!result) {
         fprintf(stdout, "WARNING: %s compression is not enabled\n",
@@ -2203,11 +2192,10 @@ class Benchmark {
         merge_keys_(FLAGS_merge_keys < 0 ? FLAGS_num : FLAGS_merge_keys),
         report_file_operations_(FLAGS_report_file_operations),
 #ifndef ROCKSDB_LITE
-        use_blob_db_(FLAGS_use_blob_db)
+        use_blob_db_(FLAGS_use_blob_db) {
 #else
-        use_blob_db_(false)
+        use_blob_db_(false) {
 #endif  // !ROCKSDB_LITE
-  {
     // use simcache instead of cache
     if (FLAGS_simcache_size >= 0) {
       if (FLAGS_cache_numshardbits >= 1) {
@@ -2536,9 +2524,6 @@ void VerifyDBFromDB(std::string& truth_db_name) {
       } else if (name == "readwhilemerging") {
         num_threads++;  // Add extra thread for writing
         method = &Benchmark::ReadWhileMerging;
-      } else if (name == "readwhilescanning") {
-        num_threads++;  // Add extra thread for scaning
-        method = &Benchmark::ReadWhileScanning;
       } else if (name == "readrandomwriterandom") {
         method = &Benchmark::ReadRandomWriteRandom;
       } else if (name == "readrandommergerandom") {
@@ -2853,13 +2838,11 @@ void VerifyDBFromDB(std::string& truth_db_name) {
     int64_t produced = 0;
     bool ok = true;
     std::string compressed;
-    CompressionContext compression_ctx(FLAGS_compression_type_e,
-                                       Options().compression_opts);
 
     // Compress 1G
     while (ok && bytes < int64_t(1) << 30) {
       compressed.clear();
-      ok = CompressSlice(compression_ctx, input, &compressed);
+      ok = CompressSlice(input, &compressed);
       produced += compressed.size();
       bytes += input.size();
       thread->stats.FinishedOps(nullptr, nullptr, 1, kCompress);
@@ -2881,11 +2864,7 @@ void VerifyDBFromDB(std::string& truth_db_name) {
     Slice input = gen.Generate(FLAGS_block_size);
     std::string compressed;
 
-    UncompressionContext uncompression_ctx(FLAGS_compression_type_e);
-    CompressionContext compression_ctx(FLAGS_compression_type_e,
-                                       Options().compression_opts);
-
-    bool ok = CompressSlice(compression_ctx, input, &compressed);
+    bool ok = CompressSlice(input, &compressed);
     int64_t bytes = 0;
     int decompress_size;
     while (ok && bytes < 1024 * 1048576) {
@@ -2905,8 +2884,8 @@ void VerifyDBFromDB(std::string& truth_db_name) {
           break;
         }
       case rocksdb::kZlibCompression:
-        uncompressed = Zlib_Uncompress(uncompression_ctx, compressed.data(),
-                                       compressed.size(), &decompress_size, 2);
+        uncompressed = Zlib_Uncompress(compressed.data(), compressed.size(),
+                                       &decompress_size, 2);
         ok = uncompressed != nullptr;
         break;
       case rocksdb::kBZip2Compression:
@@ -2915,13 +2894,13 @@ void VerifyDBFromDB(std::string& truth_db_name) {
         ok = uncompressed != nullptr;
         break;
       case rocksdb::kLZ4Compression:
-        uncompressed = LZ4_Uncompress(uncompression_ctx, compressed.data(),
-                                      compressed.size(), &decompress_size, 2);
+        uncompressed = LZ4_Uncompress(compressed.data(), compressed.size(),
+                                      &decompress_size, 2);
         ok = uncompressed != nullptr;
         break;
       case rocksdb::kLZ4HCCompression:
-        uncompressed = LZ4_Uncompress(uncompression_ctx, compressed.data(),
-                                      compressed.size(), &decompress_size, 2);
+        uncompressed = LZ4_Uncompress(compressed.data(), compressed.size(),
+                                      &decompress_size, 2);
         ok = uncompressed != nullptr;
         break;
       case rocksdb::kXpressCompression:
@@ -2930,8 +2909,8 @@ void VerifyDBFromDB(std::string& truth_db_name) {
         ok = uncompressed != nullptr;
         break;
       case rocksdb::kZSTD:
-        uncompressed = ZSTD_Uncompress(uncompression_ctx, compressed.data(),
-                                       compressed.size(), &decompress_size);
+        uncompressed = ZSTD_Uncompress(compressed.data(), compressed.size(),
+                                       &decompress_size);
         ok = uncompressed != nullptr;
         break;
       default:
@@ -3164,8 +3143,7 @@ void VerifyDBFromDB(std::string& truth_db_name) {
       block_based_options.index_block_restart_interval =
           FLAGS_index_block_restart_interval;
       block_based_options.filter_policy = filter_policy_;
-      block_based_options.format_version =
-          static_cast<uint32_t>(FLAGS_format_version);
+      block_based_options.format_version = 2;
       block_based_options.read_amp_bytes_per_bit = FLAGS_read_amp_bytes_per_bit;
       block_based_options.enable_index_compression =
           FLAGS_enable_index_compression;
@@ -4527,45 +4505,6 @@ void VerifyDBFromDB(std::string& truth_db_name) {
       }
     }
     thread->stats.AddBytes(bytes);
-  }
-
-  void ReadWhileScanning(ThreadState* thread) {
-    if (thread->tid > 0) {
-      ReadRandom(thread);
-    } else {
-      BGScan(thread);
-    }
-  }
-
-  void BGScan(ThreadState* thread) {
-    if (FLAGS_num_multi_db > 0) {
-      fprintf(stderr, "Not supporting multiple DBs.\n");
-      abort();
-    }
-    assert(db_.db != nullptr);
-    ReadOptions read_options;
-    Iterator* iter = db_.db->NewIterator(read_options);
-
-    fprintf(stderr, "num reads to do %" PRIu64 "\n", reads_);
-    Duration duration(FLAGS_duration, reads_);
-    uint64_t num_seek_to_first = 0;
-    uint64_t num_next = 0;
-    while (!duration.Done(1)) {
-      if (!iter->Valid()) {
-        iter->SeekToFirst();
-        num_seek_to_first++;
-      } else if (!iter->status().ok()) {
-        fprintf(stderr, "Iterator error: %s\n",
-                iter->status().ToString().c_str());
-        abort();
-      } else {
-        iter->Next();
-        num_next++;
-      }
-
-      thread->stats.FinishedOps(&db_, db_.db, 1, kSeek);
-    }
-    delete iter;
   }
 
   // Given a key K and value V, this puts (K+"0", V), (K+"1", V), (K+"2", V)

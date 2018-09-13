@@ -1,4 +1,6 @@
 // Copyright (c) 2012-2017, The CryptoNote developers, The Bytecoin developers
+// Copyright (c) 2016-2018, The Karbowanec developers
+// Copyright (c) 2018, The Newton Developers.
 //
 // This file is part of Bytecoin.
 //
@@ -166,6 +168,7 @@ void TransactionRpcInfo::serialize(CryptoNote::ISerializer& serializer) {
   serializer(state, "state");
   serializer(transactionHash, "transactionHash");
   serializer(blockIndex, "blockIndex");
+  serializer(confirmations, "confirmations");
   serializer(timestamp, "timestamp");
   serializer(isBase, "isBase");
   serializer(unlockTime, "unlockTime");
@@ -367,6 +370,17 @@ void EstimateFusion::Request::serialize(CryptoNote::ISerializer& serializer) {
 void EstimateFusion::Response::serialize(CryptoNote::ISerializer& serializer) {
   serializer(fusionReadyCount, "fusionReadyCount");
   serializer(totalOutputCount, "totalOutputCount");
+}
+
+void ValidateAddress::Request::serialize(CryptoNote::ISerializer& serializer) {
+  serializer(address, "address");
+}
+
+void ValidateAddress::Response::serialize(CryptoNote::ISerializer& serializer) {
+  serializer(isvalid, "isvalid");
+  serializer(address, "address");
+  serializer(spendPublicKey, "spendPublicKey");
+  serializer(viewPublicKey, "viewPublicKey");
 }
 
 }

@@ -1,4 +1,6 @@
 // Copyright (c) 2012-2017, The CryptoNote developers, The Bytecoin developers
+// Copyright (c) 2016-2018, The Karbowanec developers
+// Copyright (c) 2018, The Newton Developers
 //
 // This file is part of Bytecoin.
 //
@@ -38,6 +40,8 @@ struct Configuration {
 
   std::string bindAddress;
   uint16_t bindPort;
+  std::string m_rpcUser;
+  std::string m_rpcPassword;
 
   std::string containerFile;
   std::string containerPassword;

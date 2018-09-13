@@ -89,8 +89,6 @@ public:
 
   virtual Status DeleteFile(const std::string& fname);
 
-  Status Truncate(const std::string& fname, size_t size);
-
   virtual Status GetCurrentTime(int64_t* unix_time);
 
   virtual Status NewSequentialFile(const std::string& fname,
@@ -111,10 +109,6 @@ public:
   virtual Status NewRandomRWFile(const std::string& fname,
     unique_ptr<RandomRWFile>* result,
     const EnvOptions& options);
-
-  virtual Status NewMemoryMappedFileBuffer(
-    const std::string& fname,
-    std::unique_ptr<MemoryMappedFileBuffer>* result);
 
   virtual Status NewDirectory(const std::string& name,
     std::unique_ptr<Directory>* result);
@@ -174,9 +168,6 @@ public:
   virtual EnvOptions OptimizeForManifestWrite(
     const EnvOptions& env_options) const;
 
-  virtual EnvOptions OptimizeForManifestRead(
-    const EnvOptions& env_options) const;
-
   size_t GetPageSize() const { return page_size_; }
 
   size_t GetAllocationGranularity() const { return allocation_granularity_; }
@@ -206,8 +197,6 @@ public:
 
   Status DeleteFile(const std::string& fname) override;
 
-  Status Truncate(const std::string& fname, size_t size) override;
-
   Status GetCurrentTime(int64_t* unix_time) override;
 
   Status NewSequentialFile(const std::string& fname,
@@ -235,12 +224,8 @@ public:
 
   // The returned file will only be accessed by one thread at a time.
   Status NewRandomRWFile(const std::string& fname,
-    std::unique_ptr<RandomRWFile>* result,
+    unique_ptr<RandomRWFile>* result,
     const EnvOptions& options) override;
-
-  Status NewMemoryMappedFileBuffer(
-    const std::string& fname,
-    std::unique_ptr<MemoryMappedFileBuffer>* result) override;
 
   Status NewDirectory(const std::string& name,
     std::unique_ptr<Directory>* result) override;
@@ -317,15 +302,11 @@ public:
 
   void IncBackgroundThreadsIfNeeded(int num, Env::Priority pri) override;
 
-  EnvOptions OptimizeForManifestRead(
-    const EnvOptions& env_options) const override;
-
   EnvOptions OptimizeForLogWrite(const EnvOptions& env_options,
     const DBOptions& db_options) const override;
 
   EnvOptions OptimizeForManifestWrite(
     const EnvOptions& env_options) const override;
-
 
 private:
 

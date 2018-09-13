@@ -1,4 +1,6 @@
 // Copyright (c) 2012-2017, The CryptoNote developers, The Bytecoin developers
+// Copyright (c) 2016-2018, The Karbowanec developers
+// Copyright (c) 2018, The Newton Developers.
 //
 // This file is part of Bytecoin.
 //
@@ -229,6 +231,7 @@ struct TransactionRpcInfo {
   std::string transactionHash;
   uint32_t blockIndex;
   uint64_t timestamp;
+  uint32_t confirmations;
   bool isBase;
   uint64_t unlockTime;
   int64_t amount;
@@ -443,6 +446,23 @@ struct EstimateFusion {
 
     void serialize(CryptoNote::ISerializer& serializer);
   };
+};
+
+struct ValidateAddress {
+	struct Request {
+		std::string address;
+		
+		void serialize(CryptoNote::ISerializer& serializer);
+	};
+
+	struct Response {
+		bool isvalid;
+		std::string address;
+		std::string spendPublicKey;
+		std::string viewPublicKey;
+
+		void serialize(CryptoNote::ISerializer& serializer);
+	};
 };
 
 } //namespace PaymentService

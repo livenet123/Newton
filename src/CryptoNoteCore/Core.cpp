@@ -1,4 +1,6 @@
 // Copyright (c) 2012-2017, The CryptoNote developers, The Bytecoin developers
+// Copyright (c) 2018, The TurtleCoin Developers
+// Copyright (c) 2018, The Newton Developers
 //
 // This file is part of Bytecoin.
 //
@@ -482,6 +484,10 @@ void Core::getTransactions(const std::vector<Crypto::Hash>& transactionHashes, s
   missedHashes.insert(missedHashes.end(), leftTransactions.begin(), leftTransactions.end());
 }
 
+std::time_t Core::getStartTime() const {
+  return start_time;
+}
+
 Difficulty Core::getBlockDifficulty(uint32_t blockIndex) const {
   throwIfNotInitialized();
   IBlockchainCache* mainChain = chainsLeaves[0];
@@ -503,12 +509,12 @@ Difficulty Core::getDifficultyForNextBlock() const {
 
   uint8_t nextBlockMajorVersion = getBlockMajorVersionForHeight(topBlockIndex);
 
-  size_t blocksCount = std::min(static_cast<size_t>(topBlockIndex), currency.difficultyBlocksCountByBlockVersion(nextBlockMajorVersion));
+  size_t blocksCount = std::min(static_cast<size_t>(topBlockIndex), currency.difficultyBlocksCountByBlockVersion(nextBlockMajorVersion, topBlockIndex));
 
   auto timestamps = mainChain->getLastTimestamps(blocksCount);
   auto difficulties = mainChain->getLastCumulativeDifficulties(blocksCount);
 
-  return currency.nextDifficulty(nextBlockMajorVersion, topBlockIndex, timestamps, difficulties);
+  return currency.getNextDifficulty(nextBlockMajorVersion, topBlockIndex, timestamps, difficulties);
 }
 
 std::vector<Crypto::Hash> Core::findBlockchainSupplement(const std::vector<Crypto::Hash>& remoteBlockIds,
@@ -1034,6 +1040,57 @@ bool Core::getBlockTemplate(BlockTemplate& b, const AccountPublicAddress& adr, c
   b.previousBlockHash = getTopBlockHash();
   b.timestamp = time(nullptr);
 
+    /* Turtlecoin developers, Loki developers
+	 Ok, so if an attacker is fiddling around with timestamps on the network,
+     they can make it so all the valid pools / miners don't produce valid
+     blocks. This is because the timestamp is created as the users current time,
+     however, if the attacker is a large % of the hashrate, they can slowly
+     increase the timestamp into the future, shifting the median timestamp
+     forwards. At some point, this will mean the valid pools will submit a
+     block with their valid timestamps, and it will be rejected for being
+     behind the median timestamp / too far in the past. The simple way to
+     handle this is just to check if our timestamp is going to be invalid, and
+     set it to the median.
+
+     Once the attack ends, the median timestamp will remain how it is, until
+     the time on the clock goes forwards, and we can start submitting valid
+     timestamps again, and then we are back to normal. */
+
+  /* Thanks to jagerman for this patch:
+     https://github.com/loki-project/loki/pull/26 */
+
+  /* How many blocks we look in the past to calculate the median timestamp */
+  uint64_t blockchain_timestamp_check_window;
+
+  if (height >= currency.zawyLWMA2DifficultyBlockIndex())
+  {
+      blockchain_timestamp_check_window = CryptoNote::parameters::BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW_V2;
+  }
+  else
+  {
+      blockchain_timestamp_check_window = CryptoNote::parameters::BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW;
+  }
+
+  /* Skip the first N blocks, we don't have enough blocks to calculate a
+     proper median yet */
+  if (height >= blockchain_timestamp_check_window)
+  {
+      std::vector<uint64_t> timestamps;
+
+      /* For the last N blocks, get their timestamps */
+      for (size_t offset = height - blockchain_timestamp_check_window; offset < height; offset++)
+      {
+          timestamps.push_back(getBlockTimestampByIndex(offset));
+      }
+
+      uint64_t medianTimestamp = Common::medianValue(timestamps);
+
+      if (b.timestamp < medianTimestamp)
+      {
+          b.timestamp = medianTimestamp;
+      }
+  }
+  
   size_t medianSize = calculateCumulativeBlocksizeLimit(height) / 2;
 
   assert(!chainsStorage.empty());
@@ -1043,6 +1100,7 @@ bool Core::getBlockTemplate(BlockTemplate& b, const AccountPublicAddress& adr, c
   size_t transactionsSize;
   uint64_t fee;
   fillBlockTemplate(b, medianSize, currency.maxBlockCumulativeSize(height), transactionsSize, fee);
+
 
   /*
      two-phase miner transaction generation: we don't know exact block size until we prepare block, but we don't know
@@ -1376,12 +1434,12 @@ std::error_code Core::validateBlock(const CachedBlock& cachedBlock, IBlockchainC
     }
   }
 
-  if (block.timestamp > getAdjustedTime() + currency.blockFutureTimeLimit()) {
+  if (block.timestamp > getAdjustedTime() + currency.blockFutureTimeLimit(previousBlockIndex+1)) {
     return error::BlockValidationError::TIMESTAMP_TOO_FAR_IN_FUTURE;
   }
 
-  auto timestamps = cache->getLastTimestamps(currency.timestampCheckWindow(), previousBlockIndex, addGenesisBlock);
-  if (timestamps.size() >= currency.timestampCheckWindow()) {
+  auto timestamps = cache->getLastTimestamps(currency.timestampCheckWindow(previousBlockIndex+1), previousBlockIndex, addGenesisBlock);
+  if (timestamps.size() >= currency.timestampCheckWindow(previousBlockIndex+1)) {
     auto median_ts = Common::medianValue(timestamps);
     if (block.timestamp < median_ts) {
       return error::BlockValidationError::TIMESTAMP_TOO_FAR_IN_PAST;
@@ -1471,6 +1529,7 @@ void Core::load() {
     logger(Logging::DEBUGGING) << "Blockchain storage and root segment are on the same height and chain";
   }
 
+  start_time = std::time(nullptr);
   initialized = true;
 }
 
@@ -1566,6 +1625,19 @@ IBlockchainCache* Core::findSegmentContainingBlock(const Crypto::Hash& blockHash
 
   // than search in alternative chains
   return findAlternativeSegmentContainingBlock(blockHash);
+}
+
+IBlockchainCache* Core::findSegmentContainingBlock(uint32_t blockHeight) const {
+	assert(chainsLeaves.size() > 0);
+
+	// first search in main chain
+	auto blockSegment = findMainChainSegmentContainingBlock(blockHeight);
+	if (blockSegment != nullptr) {
+		return blockSegment;
+	}
+
+	// than search in alternative chains
+	return findAlternativeSegmentContainingBlock(blockHeight);
 }
 
 IBlockchainCache* Core::findAlternativeSegmentContainingBlock(const Crypto::Hash& blockHash) const {
@@ -1986,6 +2058,17 @@ BlockDetails Core::getBlockDetails(const Crypto::Hash& blockHash) const {
   return blockDetails;
 }
 
+BlockDetails Core::getBlockDetails(const uint32_t blockHeight) const {
+	throwIfNotInitialized();
+
+	IBlockchainCache* segment = findSegmentContainingBlock(blockHeight);
+	if (segment == nullptr) {
+		throw std::runtime_error("Requested block height wasn't found in blockchain.");
+	}
+
+	return getBlockDetails(segment->getBlockHash(blockHeight));
+}
+
 TransactionDetails Core::getTransactionDetails(const Crypto::Hash& transactionHash) const {
   throwIfNotInitialized();
 
@@ -2178,6 +2261,33 @@ std::vector<Crypto::Hash> Core::getTransactionHashesByPaymentId(const Hash& paym
   std::move(poolHashes.begin(), poolHashes.end(), std::back_inserter(hashes));
 
   return hashes;
+}
+
+bool Core::getTransactionsByPaymentId(const Crypto::Hash& paymentId, std::vector<Transaction>& transactions) {
+	std::vector<Crypto::Hash> hashes = getTransactionHashesByPaymentId(paymentId);
+	std::vector<BinaryArray> txs;
+	std::vector<Crypto::Hash> missed_txs;
+	getTransactions(hashes, txs, missed_txs);
+	for (auto const& ba : txs) {
+		Transaction tx;
+		if (!fromBinaryArray(tx, ba)) {
+			throw std::runtime_error("Couldn't deserialize transaction");
+		}
+		transactions.push_back(tx);
+	}
+	// Also check pool
+	for (auto const& transactionHash : missed_txs) {
+		try {
+			const Transaction& tx = transactionPool->getTransaction(transactionHash).getTransaction();
+			transactions.push_back(tx);
+		}
+		catch (std::exception& e) {
+			logger(Logging::ERROR) << "Error loading tx " << transactionHash << " from pool while searching for payment ID " << paymentId;
+			return false; // Not found??
+		}
+	}
+
+	return true;
 }
 
 void Core::throwIfNotInitialized() const {

@@ -17,7 +17,6 @@
 #include "rocksdb/convenience.h"
 #include "rocksdb/db.h"
 #include "util/cast_util.h"
-#include "util/file_reader_writer.h"
 #include "util/string_util.h"
 #include "util/sync_point.h"
 
@@ -42,16 +41,12 @@ Status PersistRocksDBOptions(const DBOptions& db_opt,
     return Status::InvalidArgument(
         "cf_names.size() and cf_opts.size() must be the same");
   }
-  std::unique_ptr<WritableFile> wf;
+  std::unique_ptr<WritableFile> writable;
 
-  Status s = env->NewWritableFile(file_name, &wf, EnvOptions());
+  Status s = env->NewWritableFile(file_name, &writable, EnvOptions());
   if (!s.ok()) {
     return s;
   }
-  unique_ptr<WritableFileWriter> writable;
-  writable.reset(new WritableFileWriter(std::move(wf), EnvOptions(),
-                                        nullptr /* statistics */));
-
   std::string options_file_content;
 
   writable->Append(option_file_header + "[" +
@@ -98,7 +93,8 @@ Status PersistRocksDBOptions(const DBOptions& db_opt,
       writable->Append(options_file_content + "\n");
     }
   }
-  writable->Sync(true /* use_fsync */);
+  writable->Flush();
+  writable->Fsync();
   writable->Close();
 
   return RocksDBOptionsParser::VerifyRocksDBOptionsFromFile(

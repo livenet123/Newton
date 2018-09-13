@@ -1,5 +1,5 @@
 // Copyright (c) 2012-2017, The CryptoNote developers, The Bytecoin developers
-//
+// Copyright (c) 2018, The Newton Developers
 // This file is part of Bytecoin.
 //
 // Bytecoin is free software: you can redistribute it and/or modify
@@ -48,8 +48,13 @@ private:
   CryptoNote::NodeServer& m_srv;
   Logging::LoggerRef logger;
   Logging::LoggerManager& m_logManager;
+  
 
   std::string get_commands_str();
+  std::string get_mining_speed(uint32_t hr);
+  std::string get_sync_percentage(uint64_t height, uint64_t target_height);
+  std::string get_upgrade_time(uint64_t height, uint64_t upgrade_height);
+
   bool print_block_by_height(uint32_t height);
   bool print_block_by_hash(const std::string& arg);
 
@@ -69,4 +74,6 @@ private:
   bool print_pool_sh(const std::vector<std::string>& args);
   bool start_mining(const std::vector<std::string>& args);
   bool stop_mining(const std::vector<std::string>& args);
+  bool status(const std::vector<std::string>& args);
+
 };

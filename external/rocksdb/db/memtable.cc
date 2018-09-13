@@ -74,8 +74,8 @@ MemTable::MemTable(const InternalKeyComparator& cmp,
               : nullptr,
           mutable_cf_options.memtable_huge_page_size),
       table_(ioptions.memtable_factory->CreateMemTableRep(
-          comparator_, &arena_, mutable_cf_options.prefix_extractor.get(),
-          ioptions.info_log, column_family_id)),
+          comparator_, &arena_, ioptions.prefix_extractor, ioptions.info_log,
+          column_family_id)),
       range_del_table_(SkipListFactory().CreateMemTableRep(
           comparator_, &arena_, nullptr /* transform */, ioptions.info_log,
           column_family_id)),
@@ -95,7 +95,7 @@ MemTable::MemTable(const InternalKeyComparator& cmp,
       locks_(moptions_.inplace_update_support
                  ? moptions_.inplace_update_num_locks
                  : 0),
-      prefix_extractor_(mutable_cf_options.prefix_extractor.get()),
+      prefix_extractor_(ioptions.prefix_extractor),
       flush_state_(FLUSH_NOT_REQUESTED),
       env_(ioptions.env),
       insert_with_hint_prefix_extractor_(
@@ -696,7 +696,7 @@ static bool SaveValue(void* arg, const char* entry) {
         *(s->merge_in_progress) = true;
         merge_context->PushOperand(
             v, s->inplace_update_support == false /* operand_pinned */);
-        if (merge_operator->ShouldMerge(merge_context->GetOperands())) {
+        if (merge_operator->ShouldMerge(merge_context->GetOperandsDirectionBackward())) {
           *(s->status) = MergeHelper::TimedFullMerge(
               merge_operator, s->key->user_key(), nullptr,
               merge_context->GetOperands(), s->value, s->logger, s->statistics,

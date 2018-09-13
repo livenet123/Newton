@@ -1,4 +1,5 @@
 // Copyright (c) 2012-2017, The CryptoNote developers, The Bytecoin developers
+// Copyright (c) 2018, The Newton Developers
 //
 // This file is part of Bytecoin.
 //
@@ -75,6 +76,8 @@ public:
   virtual bool hasTransaction(const Crypto::Hash& transactionHash) const override;
   virtual void getTransactions(const std::vector<Crypto::Hash>& transactionHashes, std::vector<BinaryArray>& transactions, std::vector<Crypto::Hash>& missedHashes) const override;
 
+  virtual std::time_t getStartTime() const;
+
   virtual Difficulty getBlockDifficulty(uint32_t blockIndex) const override;
   virtual Difficulty getDifficultyForNextBlock() const override;
 
@@ -112,10 +115,13 @@ public:
   virtual void load() override;
 
   virtual BlockDetails getBlockDetails(const Crypto::Hash& blockHash) const override;
+  BlockDetails getBlockDetails(const uint32_t blockHeight) const;
   virtual TransactionDetails getTransactionDetails(const Crypto::Hash& transactionHash) const override;
   virtual std::vector<Crypto::Hash> getAlternativeBlockHashesByIndex(uint32_t blockIndex) const override;
   virtual std::vector<Crypto::Hash> getBlockHashesByTimestamps(uint64_t timestampBegin, size_t secondsCount) const override;
   virtual std::vector<Crypto::Hash> getTransactionHashesByPaymentId(const Crypto::Hash& paymentId) const override;
+  virtual bool getTransactionsByPaymentId(const Crypto::Hash& paymentId, std::vector<Transaction>& transactions) override;
+  void set_checkpoints(Checkpoints&& chk_pts);
 
 private:
   const Currency& currency;
@@ -153,6 +159,7 @@ private:
   uint64_t getAdjustedTime() const;
   void updateMainChainSet();
   IBlockchainCache* findSegmentContainingBlock(const Crypto::Hash& blockHash) const;
+  IBlockchainCache* findSegmentContainingBlock(uint32_t blockHeight) const;
   IBlockchainCache* findMainChainSegmentContainingBlock(const Crypto::Hash& blockHash) const;
   IBlockchainCache* findAlternativeSegmentContainingBlock(const Crypto::Hash& blockHash) const;
 
@@ -199,6 +206,7 @@ private:
   void cutSegment(IBlockchainCache& segment, uint32_t startIndex);
 
   void switchMainChainStorage(uint32_t splitBlockIndex, IBlockchainCache& newChain);
+  time_t start_time;
 };
 
 }

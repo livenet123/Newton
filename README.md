@@ -5,7 +5,7 @@
 
 ## Building Newton
 
-### On linux:
+### On *nix:
 
 Dependencies: GCC 4.9 or later, CMake 2.8.6 or later, and Boost 1.55.
 You may download them from:
@@ -17,6 +17,7 @@ You may download them from:
 Alternatively, it may be possible to install them using a package manager.
 
 ```
+sudo apt-get install build-essential libboost-all-dev git cmake
 git clone https://github.com/livenet123/Newton.git
 export CXXFLAGS="-std=gnu++11"
 cd Newton

@@ -1,4 +1,6 @@
 // Copyright (c) 2012-2017, The CryptoNote developers, The Bytecoin developers
+// Copyright (c) 2016-2018, The Karbowanec developers
+// Copyright (c) 2018, The Newton Developers
 //
 // This file is part of Bytecoin.
 //
@@ -140,6 +142,7 @@ using CryptoNote::ISerializer;
     std::string address;
     uint64_t blockIndex;
     uint64_t unlockTime;
+	uint64_t confirmations;
 
     void serialize(ISerializer& s) {
       KV_MEMBER(time)
@@ -151,6 +154,7 @@ using CryptoNote::ISerializer;
       KV_MEMBER(address)
       KV_MEMBER(blockIndex)
       KV_MEMBER(unlockTime)
+	  KV_MEMBER(confirmations)
     }
   };
 
@@ -166,6 +170,31 @@ using CryptoNote::ISerializer;
     };
   };
 
+  /* Command: get_transaction */
+  struct COMMAND_RPC_GET_TRANSACTION
+  {
+	  struct request
+	  {
+		  std::string tx_hash;
+
+		  void serialize(ISerializer& s)
+		  {
+			  KV_MEMBER(tx_hash)
+		  }
+	  };
+	  struct response
+	  {
+		  Transfer transaction_details;
+		  std::list<transfer_destination> destinations;
+
+		  void serialize(ISerializer& s)
+		  {
+			  KV_MEMBER(transaction_details)
+				  KV_MEMBER(destinations)
+		  }
+	  };
+  };
+
   struct COMMAND_RPC_GET_HEIGHT {
     typedef CryptoNote::EMPTY_STRUCT request;
 
@@ -177,6 +206,110 @@ using CryptoNote::ISerializer;
       }
     };
   };
+
+  	/* Command: get_address */
+	struct COMMAND_RPC_GET_ADDRESS
+	{
+		typedef CryptoNote::EMPTY_STRUCT request;
+		struct response
+		{
+			std::string address;
+
+			void serialize(ISerializer& s)
+			{
+				KV_MEMBER(address)
+			}
+		};
+	};
+  /* Command: paymentid */
+  struct COMMAND_RPC_GEN_PAYMENT_ID
+  {
+	  typedef CryptoNote::EMPTY_STRUCT request;
+	  struct response
+	  {
+		  std::string payment_id;
+
+		  void serialize(ISerializer& s)
+		  {
+			  KV_MEMBER(payment_id)
+		  }
+	  };
+  };
+
+  struct COMMAND_RPC_SIGN_MESSAGE
+  {
+	  struct request
+	  {
+		  std::string message;
+
+		  void serialize(ISerializer& s)
+		  {
+			  KV_MEMBER(message);
+		  }
+	  };
+
+	  struct response
+	  {
+		  std::string signature;
+
+		  void serialize(ISerializer& s)
+		  {
+			  KV_MEMBER(signature);
+		  }
+	  };
+  };
+
+  struct COMMAND_RPC_VERIFY_MESSAGE
+  {
+	  struct request
+	  {
+		  std::string message;
+		  std::string address;
+		  std::string signature;
+
+		  void serialize(ISerializer& s)
+		  {
+			  KV_MEMBER(message);
+			  KV_MEMBER(address);
+			  KV_MEMBER(signature);
+		  }
+	  };
+
+	  struct response
+	  {
+		  bool good;
+
+		  void serialize(ISerializer& s)
+		  {
+			  KV_MEMBER(good);
+		  }
+	  };
+  };
+  
+  	struct COMMAND_RPC_CHANGE_PASSWORD
+	{
+		struct request
+		{
+			std::string old_password;
+			std::string new_password;
+
+			void serialize(ISerializer& s)
+			{
+				KV_MEMBER(old_password);
+				KV_MEMBER(new_password);
+			}
+		};
+
+		struct response
+		{
+			bool password_changed;
+
+			void serialize(ISerializer& s)
+			{
+				KV_MEMBER(password_changed);
+			}
+		};
+	};
 
   struct COMMAND_RPC_RESET {
     typedef CryptoNote::EMPTY_STRUCT request;

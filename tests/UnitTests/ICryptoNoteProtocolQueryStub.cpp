@@ -45,6 +45,10 @@ void ICryptoNoteProtocolQueryStub::setObservedHeight(uint32_t height) {
   observedHeight = height;
 }
 
+uint32_t ICryptoNoteProtocolQueryStub::getBlockchainHeight() const {
+  return blockchainHeight;
+}
+
 void ICryptoNoteProtocolQueryStub::setSynchronizedStatus(bool status) {
     synchronized = status;
 }

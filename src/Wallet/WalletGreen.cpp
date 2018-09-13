@@ -1984,7 +1984,7 @@ bool WalletGreen::adjustTransfer(size_t transactionId, size_t firstTransferIdx, 
           it->second.amount = amount;
           updated = true;
         }
-        
+
         firstAddressTransferFound = true;
         ++it;
       }
@@ -2067,9 +2067,9 @@ std::unique_ptr<CryptoNote::ITransaction> WalletGreen::makeTransaction(const std
   }
 
   m_logger(DEBUGGING) << "Transaction created, hash " << tx->getTransactionHash() <<
-    ", inputs " << m_currency.formatAmount(tx->getInputTotalAmount()) <<
-    ", outputs " << m_currency.formatAmount(tx->getOutputTotalAmount()) <<
-    ", fee " << m_currency.formatAmount(tx->getInputTotalAmount() - tx->getOutputTotalAmount());
+	  ", inputs " << m_currency.formatAmount(tx->getInputTotalAmount()) <<
+	  ", outputs " << m_currency.formatAmount(tx->getOutputTotalAmount()) <<
+	  ", fee " << m_currency.formatAmount(tx->getInputTotalAmount() - tx->getOutputTotalAmount());
     return tx;
 }
 
@@ -3164,7 +3164,7 @@ std::vector<WalletGreen::OutputToTransfer> WalletGreen::pickRandomFusionInputs(c
       break;
     }
   }
-  
+
   if (bucketNumberIndex == bucketNumbers.size()) {
     return {};
   }
@@ -3176,7 +3176,7 @@ std::vector<WalletGreen::OutputToTransfer> WalletGreen::pickRandomFusionInputs(c
   for (size_t i = 0; i < selectedBucket; ++i) {
     lowerBound *= 10;
   }
-   
+
   uint64_t upperBound = selectedBucket == std::numeric_limits<uint64_t>::digits10 ? UINT64_MAX : lowerBound * 10;
   std::vector<WalletGreen::OutputToTransfer> selectedOuts;
   selectedOuts.reserve(bucketSizes[selectedBucket]);
@@ -3202,7 +3202,7 @@ std::vector<WalletGreen::OutputToTransfer> WalletGreen::pickRandomFusionInputs(c
   }
 
   std::sort(trimmedSelectedOuts.begin(), trimmedSelectedOuts.end(), outputsSortingFunction);
-  return trimmedSelectedOuts;  
+  return trimmedSelectedOuts;
 }
 
 std::vector<TransactionsInBlockInfo> WalletGreen::getTransactionsInBlocks(uint32_t blockIndex, size_t count) const {

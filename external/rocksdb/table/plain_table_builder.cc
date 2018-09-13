@@ -57,7 +57,7 @@ extern const uint64_t kPlainTableMagicNumber = 0x8242229663bf9564ull;
 extern const uint64_t kLegacyPlainTableMagicNumber = 0x4f3418eb7a8f13b8ull;
 
 PlainTableBuilder::PlainTableBuilder(
-    const ImmutableCFOptions& ioptions, const MutableCFOptions& moptions,
+    const ImmutableCFOptions& ioptions,
     const std::vector<std::unique_ptr<IntTblPropCollectorFactory>>*
         int_tbl_prop_collector_factories,
     uint32_t column_family_id, WritableFileWriter* file, uint32_t user_key_len,
@@ -66,21 +66,20 @@ PlainTableBuilder::PlainTableBuilder(
     uint32_t num_probes, size_t huge_page_tlb_size, double hash_table_ratio,
     bool store_index_in_file)
     : ioptions_(ioptions),
-      moptions_(moptions),
       bloom_block_(num_probes),
       file_(file),
       bloom_bits_per_key_(bloom_bits_per_key),
       huge_page_tlb_size_(huge_page_tlb_size),
-      encoder_(encoding_type, user_key_len, moptions.prefix_extractor.get(),
+      encoder_(encoding_type, user_key_len, ioptions.prefix_extractor,
                index_sparseness),
       store_index_in_file_(store_index_in_file),
-      prefix_extractor_(moptions.prefix_extractor.get()) {
+      prefix_extractor_(ioptions.prefix_extractor) {
   // Build index block and save it in the file if hash_table_ratio > 0
   if (store_index_in_file_) {
     assert(hash_table_ratio > 0 || IsTotalOrderMode());
-    index_builder_.reset(new PlainTableIndexBuilder(
-        &arena_, ioptions, moptions.prefix_extractor.get(), index_sparseness,
-        hash_table_ratio, huge_page_tlb_size_));
+    index_builder_.reset(
+        new PlainTableIndexBuilder(&arena_, ioptions, index_sparseness,
+                                   hash_table_ratio, huge_page_tlb_size_));
     properties_.user_collected_properties
         [PlainTablePropertyNames::kBloomVersion] = "1";  // For future use
   }
@@ -97,8 +96,8 @@ PlainTableBuilder::PlainTableBuilder(
   properties_.format_version = (encoding_type == kPlain) ? 0 : 1;
   properties_.column_family_id = column_family_id;
   properties_.column_family_name = column_family_name;
-  properties_.prefix_extractor_name = moptions_.prefix_extractor != nullptr
-                                          ? moptions_.prefix_extractor->Name()
+  properties_.prefix_extractor_name = ioptions_.prefix_extractor != nullptr
+                                          ? ioptions_.prefix_extractor->Name()
                                           : "nullptr";
 
   std::string val;
@@ -132,11 +131,11 @@ void PlainTableBuilder::Add(const Slice& key, const Slice& value) {
 
   // Store key hash
   if (store_index_in_file_) {
-    if (moptions_.prefix_extractor == nullptr) {
+    if (ioptions_.prefix_extractor == nullptr) {
       keys_or_prefixes_hashes_.push_back(GetSliceHash(internal_key.user_key));
     } else {
       Slice prefix =
-          moptions_.prefix_extractor->Transform(internal_key.user_key);
+          ioptions_.prefix_extractor->Transform(internal_key.user_key);
       keys_or_prefixes_hashes_.push_back(GetSliceHash(prefix));
     }
   }

@@ -1,4 +1,6 @@
 // Copyright (c) 2012-2017, The CryptoNote developers, The Bytecoin developers
+// Copyright (c) 2016-2018, The Karbowanec developers
+// Copyright (c) 2018, The Newton Developers
 //
 // This file is part of Bytecoin.
 //
@@ -42,6 +44,7 @@ public:
   void stop();
 
   virtual void processRequest(const HttpRequest& request, HttpResponse& response) = 0;
+  virtual size_t get_connections_count() const;
 
 protected:
 

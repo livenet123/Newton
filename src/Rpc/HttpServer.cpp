@@ -1,4 +1,6 @@
 // Copyright (c) 2012-2017, The CryptoNote developers, The Bytecoin developers
+// Copyright (c) 2016-2018, The Karbowanec developers
+// Copyright (c) 2018, The Newton Developers
 //
 // This file is part of Bytecoin.
 //
@@ -42,46 +44,27 @@ namespace {
 			if (i + 1 < data.size()) {
 				result.push_back(encodingTable[((b & 0xF) << 2) | (c >> 6)]);
 				if (i + 2 < data.size()) {
-					result.push_back(encodingTable[c & 0x3F]);
-					
-						
-				}
-				
-					
-			}
-			
-				
-		}
-		
+					result.push_back(encodingTable[c & 0x3F]);											
+				}					
+			}				
+		}		
 			while (result.size() != resultSize) {
-			result.push_back('=');
-			
-				
-		}
-		
-			return result;
-		
-			
-	}
-	
+			result.push_back('=');							
+		}		
+			return result;			
+	}	
 		void fillUnauthorizedResponse(CryptoNote::HttpResponse& response) {
 		response.setStatus(CryptoNote::HttpResponse::STATUS_401);
 		response.addHeader("WWW-Authenticate", "Basic realm=\"RPC\"");
 		response.addHeader("Content-Type", "text/plain");
-		response.setBody("Authorization required");
-		
-			
-	}
-	
-		
-		
+		response.setBody("Authorization required");					
+	}		
 }
 
 namespace CryptoNote {
 
 HttpServer::HttpServer(System::Dispatcher& dispatcher, Logging::ILogger& log)
   : m_dispatcher(dispatcher), workingContextGroup(dispatcher), logger(log, "HttpServer") {
-
 }
 
 void HttpServer::start(const std::string& address, uint16_t port, const std::string& user, const std::string& password) {
@@ -162,27 +145,20 @@ bool HttpServer::authenticate(const HttpRequest& request) const {
 	if (!m_credentials.empty()) {
 		auto headerIt = request.getHeaders().find("authorization");
 		if (headerIt == request.getHeaders().end()) {
-			return false;
-			
-				
-		}
-		
+			return false;				
+		}		
 			if (headerIt->second.substr(0, 6) != "Basic ") {
-			return false;
-			
-				
-		}
-		
+			return false;							
+		}		
 			if (headerIt->second.substr(6) != m_credentials) {
-			return false;
-			
-				
-		}
-		
-			
-	}
-	
+			return false;							
+		}					
+	}	
 		return true;
+}
+
+size_t HttpServer::get_connections_count() const {
+	return m_connections.size();
 }
 
 }

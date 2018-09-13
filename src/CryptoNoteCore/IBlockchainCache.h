@@ -170,7 +170,7 @@ public:
 
   virtual void save() = 0;
   virtual void load() = 0;
-
+  
   virtual std::vector<uint64_t> getLastUnits(size_t count, uint32_t blockIndex, UseGenesis use,
                                              std::function<uint64_t(const CachedBlockInfo&)> pred) const = 0;
   virtual std::vector<Crypto::Hash> getTransactionHashes() const = 0;

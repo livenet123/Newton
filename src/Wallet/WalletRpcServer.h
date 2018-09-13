@@ -1,4 +1,6 @@
 // Copyright (c) 2012-2017, The CryptoNote developers, The Bytecoin developers
+// Copyright (c) 2016-2018, The Karbowanec developers
+// Copyright (c) 2018, The Newton Developers
 //
 // This file is part of Bytecoin.
 //
@@ -37,24 +39,24 @@ namespace Tools
   public:
 
     wallet_rpc_server(
-      System::Dispatcher& dispatcher, 
+      System::Dispatcher& dispatcher,
       Logging::ILogger& log,
-      CryptoNote::IWalletLegacy &w, 
-      CryptoNote::INode &n, 
+      CryptoNote::IWalletLegacy &w,
+      CryptoNote::INode &n,
       CryptoNote::Currency& currency,
       const std::string& walletFilename);
 
 
     static void init_options(boost::program_options::options_description& desc);
     bool init(const boost::program_options::variables_map& vm);
-    
+
     bool run();
     void send_stop_signal();
 
     static const command_line::arg_descriptor<uint16_t> arg_rpc_bind_port;
     static const command_line::arg_descriptor<std::string> arg_rpc_bind_ip;
-	static const command_line::arg_descriptor<std::string> arg_rpc_user;
-	static const command_line::arg_descriptor<std::string> arg_rpc_password;
+	  static const command_line::arg_descriptor<std::string> arg_rpc_user;
+	  static const command_line::arg_descriptor<std::string> arg_rpc_password;
 
   private:
 
@@ -66,8 +68,14 @@ namespace Tools
     bool on_store(const wallet_rpc::COMMAND_RPC_STORE::request& req, wallet_rpc::COMMAND_RPC_STORE::response& res);
     bool on_get_payments(const wallet_rpc::COMMAND_RPC_GET_PAYMENTS::request& req, wallet_rpc::COMMAND_RPC_GET_PAYMENTS::response& res);
     bool on_get_transfers(const wallet_rpc::COMMAND_RPC_GET_TRANSFERS::request& req, wallet_rpc::COMMAND_RPC_GET_TRANSFERS::response& res);
-    bool on_get_height(const wallet_rpc::COMMAND_RPC_GET_HEIGHT::request& req, wallet_rpc::COMMAND_RPC_GET_HEIGHT::response& res);
+	  bool on_get_transaction(const wallet_rpc::COMMAND_RPC_GET_TRANSACTION::request& req, wallet_rpc::COMMAND_RPC_GET_TRANSACTION::response& res);
+	  bool on_get_height(const wallet_rpc::COMMAND_RPC_GET_HEIGHT::request& req, wallet_rpc::COMMAND_RPC_GET_HEIGHT::response& res);
+	  bool on_get_address(const wallet_rpc::COMMAND_RPC_GET_ADDRESS::request& req, wallet_rpc::COMMAND_RPC_GET_ADDRESS::response& res);
+	  bool on_gen_paymentid(const wallet_rpc::COMMAND_RPC_GET_ADDRESS::request& req, wallet_rpc::COMMAND_RPC_GEN_PAYMENT_ID::response& res);
+	  bool on_sign_message(const wallet_rpc::COMMAND_RPC_SIGN_MESSAGE::request& req, wallet_rpc::COMMAND_RPC_SIGN_MESSAGE::response& res);
+	  bool on_verify_message(const wallet_rpc::COMMAND_RPC_VERIFY_MESSAGE::request& req, wallet_rpc::COMMAND_RPC_VERIFY_MESSAGE::response& res);
     bool on_reset(const wallet_rpc::COMMAND_RPC_RESET::request& req, wallet_rpc::COMMAND_RPC_RESET::response& res);
+	  bool on_change_password(const wallet_rpc::COMMAND_RPC_CHANGE_PASSWORD::request& req, wallet_rpc::COMMAND_RPC_CHANGE_PASSWORD::response& res);
 
     bool handle_command_line(const boost::program_options::variables_map& vm);
 
@@ -76,8 +84,8 @@ namespace Tools
     CryptoNote::INode& m_node;
     uint16_t m_port;
     std::string m_bind_ip;
-	std::string m_rpcUser;
-	std::string m_rpcPassword;
+	  std::string m_rpcUser;
+	  std::string m_rpcPassword;
     CryptoNote::Currency& m_currency;
     const std::string m_walletFilename;
 

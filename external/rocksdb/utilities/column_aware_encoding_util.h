@@ -71,7 +71,6 @@ class ColumnAwareEncodingReader {
   std::unique_ptr<RandomAccessFileReader> file_;
 
   const ImmutableCFOptions ioptions_;
-  const MutableCFOptions moptions_;
   InternalKeyComparator internal_comparator_;
   std::unique_ptr<TableProperties> table_properties_;
 };

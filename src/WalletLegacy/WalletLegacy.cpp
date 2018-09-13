@@ -1,4 +1,5 @@
 // Copyright (c) 2012-2017, The CryptoNote developers, The Bytecoin developers
+// Copyright (c) 2018, The Newton Developers
 //
 // This file is part of Bytecoin.
 //
@@ -25,6 +26,7 @@
 #include "WalletLegacy/WalletLegacySerialization.h"
 #include "WalletLegacy/WalletLegacySerializer.h"
 #include "WalletLegacy/WalletUtils.h"
+#include "Common/Base58.h"
 
 using namespace Crypto;
 
@@ -607,5 +609,120 @@ std::vector<TransactionId> WalletLegacy::deleteOutdatedUnconfirmedTransactions()
   std::lock_guard<std::mutex> lock(m_cacheMutex);
   return m_transactionsCache.deleteOutdatedTransactions();
 }
+
+void WalletLegacy::initAndGenerateDeterministic(const std::string& password) {
+	{
+		std::unique_lock<std::mutex> stateLock(m_cacheMutex);
+
+		if (m_state != NOT_INITIALIZED) {
+			throw std::system_error(make_error_code(error::ALREADY_INITIALIZED));
+		}
+
+		m_account.generateDeterministic();
+		m_password = password;
+
+		initSync();
+	}
+
+	m_observerManager.notify(&IWalletLegacyObserver::initCompleted, std::error_code());
+}
+
+std::string WalletLegacy::sign_message(const std::string &message) {
+	Crypto::Hash hash;
+	Crypto::cn_fast_hash(message.data(), message.size(), hash);
+	const CryptoNote::AccountKeys &keys = m_account.getAccountKeys();
+	Crypto::Signature signature;
+	Crypto::generate_signature(hash, keys.address.spendPublicKey, keys.spendSecretKey, signature);
+	return std::string("SigV1") + Tools::Base58::encode(std::string((const char *)&signature, sizeof(signature)));
+}
+
+bool WalletLegacy::verify_message(const std::string &message, const CryptoNote::AccountPublicAddress &address, const std::string &signature) {
+	const size_t header_len = strlen("SigV1");
+	if (signature.size() < header_len || signature.substr(0, header_len) != "SigV1") {
+		std::cout << "Signature header check error";
+		return false;
+	}
+	Crypto::Hash hash;
+	Crypto::cn_fast_hash(message.data(), message.size(), hash);
+	std::string decoded;
+	if (!Tools::Base58::decode(signature.substr(header_len), decoded)) {
+		std::cout << "Signature decoding error";
+		return false;
+	}
+	Crypto::Signature s;
+	if (sizeof(s) != decoded.size()) {
+		std::cout << "Signature decoding error";
+		return false;
+	}
+	memcpy(&s, decoded.data(), sizeof(s));
+	return Crypto::check_signature(hash, address.spendPublicKey, s);
+}
+
+Crypto::SecretKey WalletLegacy::generateKey(const std::string& password, const Crypto::SecretKey& recovery_param, bool recover, bool two_random) {
+	std::unique_lock<std::mutex> stateLock(m_cacheMutex);
+
+	if (m_state != NOT_INITIALIZED) {
+		throw std::system_error(make_error_code(error::ALREADY_INITIALIZED));
+	}
+
+	Crypto::SecretKey retval = m_account.generate_key(recovery_param, recover, two_random);
+	m_password = password;
+
+	initSync();
+
+	m_observerManager.notify(&IWalletLegacyObserver::initCompleted, std::error_code());
+	return retval;
+}
+
+uint64_t WalletLegacy::dustBalance() {
+	std::unique_lock<std::mutex> lock(m_cacheMutex);
+	throwIfNotInitialised();
+
+	std::vector<TransactionOutputInformation> outputs;
+	m_transferDetails->getOutputs(outputs, ITransfersContainer::IncludeKeyUnlocked);
+
+	uint64_t money = 0;
+
+	for (size_t i = 0; i < outputs.size(); ++i) {
+		const auto& out = outputs[i];
+		if (!m_transactionsCache.isUsed(out)) {
+			if (/*out.amount < m_currency.defaultDustThreshold() &&*/ !is_valid_decomposed_amount(out.amount)) {
+				money += out.amount;
+			}
+		}
+	}
+
+	return money;
+}
+TransactionId WalletLegacy::sendDustTransaction(const WalletLegacyTransfer& transfer, uint64_t fee, const std::string& extra, uint64_t mixIn, uint64_t unlockTimestamp) {
+	std::vector<WalletLegacyTransfer> transfers;
+	transfers.push_back(transfer);
+	throwIfNotInitialised();
+
+	return sendDustTransaction(transfers, fee, extra, mixIn, unlockTimestamp);
+}
+
+TransactionId WalletLegacy::sendDustTransaction(const std::vector<WalletLegacyTransfer>& transfers, uint64_t fee, const std::string& extra, uint64_t mixIn, uint64_t unlockTimestamp) {
+	TransactionId txId = 0;
+	std::shared_ptr<WalletRequest> request;
+	std::deque<std::shared_ptr<WalletLegacyEvent>> events;
+	throwIfNotInitialised();
+
+	{
+		std::unique_lock<std::mutex> lock(m_cacheMutex);
+		request = m_sender->makeSendDustRequest(txId, events, transfers, fee, extra, mixIn, unlockTimestamp);
+	}
+
+	notifyClients(events);
+
+	if (request) {
+		m_asyncContextCounter.addAsyncContext();
+		request->perform(m_node, std::bind(&WalletLegacy::sendTransactionCallback, this, std::placeholders::_1, std::placeholders::_2));
+	}
+
+	return txId;
+}
+
+
 
 } //namespace CryptoNote

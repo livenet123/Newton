@@ -32,9 +32,6 @@ class SequentialFileReader;
 
 namespace test {
 
-extern const uint32_t kDefaultFormatVersion;
-extern const uint32_t kLatestFormatVersion;
-
 // Store in *dst a random string of length "len" and return a Slice that
 // references the generated data.
 extern Slice RandomString(Random* rnd, int len, std::string* dst);
@@ -89,6 +86,13 @@ class PlainInternalKeyComparator : public InternalKeyComparator {
 
   virtual int Compare(const Slice& a, const Slice& b) const override {
     return user_comparator()->Compare(a, b);
+  }
+  virtual void FindShortestSeparator(std::string* start,
+                                     const Slice& limit) const override {
+    user_comparator()->FindShortestSeparator(start, limit);
+  }
+  virtual void FindShortSuccessor(std::string* key) const override {
+    user_comparator()->FindShortSuccessor(key);
   }
 };
 #endif
@@ -174,9 +178,6 @@ class VectorIterator : public InternalIterator {
   virtual Slice value() const override { return Slice(values_[current_]); }
 
   virtual Status status() const override { return Status::OK(); }
-
-  virtual bool IsKeyPinned() const override { return true; }
-  virtual bool IsValuePinned() const override { return true; }
 
  private:
   std::vector<std::string> keys_;

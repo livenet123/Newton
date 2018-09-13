@@ -265,18 +265,17 @@ Status ReadFooterFromFile(RandomAccessFileReader* file,
 }
 
 Status UncompressBlockContentsForCompressionType(
-    const UncompressionContext& uncompression_ctx, const char* data, size_t n,
-    BlockContents* contents, uint32_t format_version,
-    const ImmutableCFOptions& ioptions) {
+    const char* data, size_t n, BlockContents* contents,
+    uint32_t format_version, const Slice& compression_dict,
+    CompressionType compression_type, const ImmutableCFOptions &ioptions) {
   std::unique_ptr<char[]> ubuf;
 
-  assert(uncompression_ctx.type() != kNoCompression &&
-         "Invalid compression type");
+  assert(compression_type != kNoCompression && "Invalid compression type");
 
   StopWatchNano timer(ioptions.env,
     ShouldReportDetailedTime(ioptions.env, ioptions.statistics));
   int decompress_size = 0;
-  switch (uncompression_ctx.type()) {
+  switch (compression_type) {
     case kSnappyCompression: {
       size_t ulength = 0;
       static char snappy_corrupt_msg[] =
@@ -293,8 +292,9 @@ Status UncompressBlockContentsForCompressionType(
     }
     case kZlibCompression:
       ubuf.reset(Zlib_Uncompress(
-          uncompression_ctx, data, n, &decompress_size,
-          GetCompressFormatForVersion(kZlibCompression, format_version)));
+          data, n, &decompress_size,
+          GetCompressFormatForVersion(kZlibCompression, format_version),
+          compression_dict));
       if (!ubuf) {
         static char zlib_corrupt_msg[] =
           "Zlib not supported or corrupted Zlib compressed block contents";
@@ -317,8 +317,9 @@ Status UncompressBlockContentsForCompressionType(
       break;
     case kLZ4Compression:
       ubuf.reset(LZ4_Uncompress(
-          uncompression_ctx, data, n, &decompress_size,
-          GetCompressFormatForVersion(kLZ4Compression, format_version)));
+          data, n, &decompress_size,
+          GetCompressFormatForVersion(kLZ4Compression, format_version),
+          compression_dict));
       if (!ubuf) {
         static char lz4_corrupt_msg[] =
           "LZ4 not supported or corrupted LZ4 compressed block contents";
@@ -329,8 +330,9 @@ Status UncompressBlockContentsForCompressionType(
       break;
     case kLZ4HCCompression:
       ubuf.reset(LZ4_Uncompress(
-          uncompression_ctx, data, n, &decompress_size,
-          GetCompressFormatForVersion(kLZ4HCCompression, format_version)));
+          data, n, &decompress_size,
+          GetCompressFormatForVersion(kLZ4HCCompression, format_version),
+          compression_dict));
       if (!ubuf) {
         static char lz4hc_corrupt_msg[] =
           "LZ4HC not supported or corrupted LZ4HC compressed block contents";
@@ -351,7 +353,7 @@ Status UncompressBlockContentsForCompressionType(
       break;
     case kZSTD:
     case kZSTDNotFinalCompression:
-      ubuf.reset(ZSTD_Uncompress(uncompression_ctx, data, n, &decompress_size));
+      ubuf.reset(ZSTD_Uncompress(data, n, &decompress_size, compression_dict));
       if (!ubuf) {
         static char zstd_corrupt_msg[] =
             "ZSTD not supported or corrupted ZSTD compressed block contents";
@@ -381,14 +383,14 @@ Status UncompressBlockContentsForCompressionType(
 // buffer is returned via 'result' and it is upto the caller to
 // free this buffer.
 // format_version is the block format as defined in include/rocksdb/table.h
-Status UncompressBlockContents(const UncompressionContext& uncompression_ctx,
-                               const char* data, size_t n,
+Status UncompressBlockContents(const char* data, size_t n,
                                BlockContents* contents, uint32_t format_version,
-                               const ImmutableCFOptions& ioptions) {
+                               const Slice& compression_dict,
+                               const ImmutableCFOptions &ioptions) {
   assert(data[n] != kNoCompression);
-  assert(data[n] == uncompression_ctx.type());
   return UncompressBlockContentsForCompressionType(
-      uncompression_ctx, data, n, contents, format_version, ioptions);
+      data, n, contents, format_version, compression_dict,
+      (CompressionType)data[n], ioptions);
 }
 
 }  // namespace rocksdb

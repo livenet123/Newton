@@ -205,10 +205,10 @@ Status BlobDumpTool::DumpRecord(DisplayType show_key, DisplayType show_blob,
   if (compression != kNoCompression &&
       (show_uncompressed_blob != DisplayType::kNone || show_summary)) {
     BlockContents contents;
-    UncompressionContext uncompression_ctx(compression);
     s = UncompressBlockContentsForCompressionType(
-        uncompression_ctx, slice.data() + key_size, value_size, &contents,
-        2 /*compress_format_version*/, ImmutableCFOptions(Options()));
+        slice.data() + key_size, value_size, &contents,
+        2 /*compress_format_version*/, Slice(), compression,
+        ImmutableCFOptions(Options()));
     if (!s.ok()) {
       return s;
     }

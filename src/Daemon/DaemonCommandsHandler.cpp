@@ -1,5 +1,5 @@
 // Copyright (c) 2012-2017, The CryptoNote developers, The Bytecoin developers
-//
+// Copyright (c) 2018, The Newton Developers
 // This file is part of Bytecoin.
 //
 // Bytecoin is free software: you can redistribute it and/or modify
@@ -23,6 +23,8 @@
 #include "CryptoNoteProtocol/CryptoNoteProtocolHandler.h"
 #include "Serialization/SerializationTools.h"
 #include "version.h"
+#include <boost/format.hpp>
+
 
 namespace {
 template <typename T>
@@ -65,6 +67,8 @@ DaemonCommandsHandler::DaemonCommandsHandler(CryptoNote::Core& core, CryptoNote:
   m_consoleHandler.setHandler("print_pool", boost::bind(&DaemonCommandsHandler::print_pool, this, _1), "Print transaction pool (long format)");
   m_consoleHandler.setHandler("print_pool_sh", boost::bind(&DaemonCommandsHandler::print_pool_sh, this, _1), "Print transaction pool (short format)");
   m_consoleHandler.setHandler("set_log", boost::bind(&DaemonCommandsHandler::set_log, this, _1), "set_log <level> - Change current log level, <level> is a number 0-4");
+  m_consoleHandler.setHandler("status", boost::bind(&DaemonCommandsHandler::status, this, _1), "Show daemon status");
+
 }
 
 //--------------------------------------------------------------------------------
@@ -79,7 +83,46 @@ std::string DaemonCommandsHandler::get_commands_str()
   ss << usage << ENDL;
   return ss.str();
 }
+//--------------------------------------------------------------------------------
+std::string DaemonCommandsHandler::get_mining_speed(uint32_t hr) {
+	if (hr>1e9) return (boost::format("%.2f GH/s") % (hr / 1e9)).str();
+	if (hr>1e6) return (boost::format("%.2f MH/s") % (hr / 1e6)).str();
+	if (hr>1e3) return (boost::format("%.2f kH/s") % (hr / 1e3)).str();
+	return (boost::format("%.0f H/s") % hr).str();
+}
 
+//--------------------------------------------------------------------------------
+std::string DaemonCommandsHandler::get_sync_percentage(uint64_t height, uint64_t target_height) {
+	/* Don't divide by zero */
+	if (height == 0 || target_height == 0)
+	{
+		return "0.00";
+	}
+
+	/* So we don't have > 100% */
+	if (height > target_height)
+	{
+		height = target_height;
+	}
+
+	float pc = 100.0f * height / target_height;
+
+	if (height < target_height && pc > 99.99f) {
+		pc = 99.99f; // to avoid 100% when not fully synced
+	}
+
+	return (boost::format("%.2f") % pc).str();
+}
+//---------------------------------------------------------------------------------------------
+std::string DaemonCommandsHandler::get_upgrade_time(uint64_t height, uint64_t upgrade_height) {
+	if (height >= upgrade_height) {
+		return std::string();
+	}
+	uint64_t days = static_cast<uint64_t>((upgrade_height - height) / CryptoNote::parameters::EXPECTED_NUMBER_OF_BLOCKS_PER_DAY);
+
+	if (days < 1) return std::string(" (next fork in <1 day)");
+	return (boost::format(" (next fork in %.1f days)") % days).str();
+}
 //--------------------------------------------------------------------------------
 bool DaemonCommandsHandler::exit(const std::vector<std::string>& args) {
   m_consoleHandler.requestStop();
@@ -92,6 +135,62 @@ bool DaemonCommandsHandler::help(const std::vector<std::string>& args) {
   std::cout << get_commands_str() << ENDL;
   return true;
 }
+
+//--------------------------------------------------------------------------------
+bool DaemonCommandsHandler::status(const std::vector<std::string>& args) {
+
+  uint32_t network_height = std::max(static_cast<uint32_t>(1), m_srv.get_payload_object().getBlockchainHeight());
+  uint32_t bc_height = m_core.getTopBlockIndex() + 1; 
+  uint32_t last_known_block_index = std::max(static_cast<uint32_t>(1), m_srv.get_payload_object().getObservedHeight()) - 1;
+  uint16_t major_version = (uint16_t)m_core.getBlockDetails(m_core.getTopBlockIndex()).majorVersion;
+  uint16_t minor_version = (uint16_t)m_core.getBlockDetails(m_core.getTopBlockIndex()).minorVersion;
+  uint32_t upgrade_heigh = m_core.getCurrency().upgradeHeight(CryptoNote::BLOCK_MAJOR_VERSION_2);
+  uint64_t difficulty = m_core.getDifficultyForNextBlock();
+  uint32_t hashrate = (uint32_t)round(difficulty / CryptoNote::parameters::DIFFICULTY_TARGET);
+  size_t tx_count = m_core.getBlockchainTransactionCount() - bc_height; //without coinbase
+  size_t tx_pool_size = m_core.getPoolTransactionCount();
+  size_t alt_blocks_count = m_core.getAlternativeBlockCount();
+  size_t total_conn = m_srv.get_connections_count();
+  size_t rpc_conn = m_srv.get_connections_count();
+  size_t outgoing_connections_count = m_srv.get_outgoing_connections_count();
+  size_t incoming_connections_count = total_conn - outgoing_connections_count;
+  size_t white_peerlist_size = m_srv.getPeerlistManager().get_white_peers_count();
+  size_t grey_peerlist_size = m_srv.getPeerlistManager().get_gray_peers_count();
+  std::time_t uptime = std::time(nullptr) - m_core.getStartTime();
+  bool synced = ((uint32_t)bc_height == (uint32_t)network_height);
+  bool isTestnet = m_core.getCurrency().isTestnet();
+
+  std::string mode = "";
+  if (isTestnet) {
+	  mode = "Testnet";
+  }else if(!isTestnet){
+	  mode = "Mainnet";
+	 }
+
+      std::cout << std::endl;
+	  std::cout << " Newton Version: " << PROJECT_VERSION << std::endl;
+	  std::cout << " Network Mode: " << mode << std::endl;
+	  std::cout << " Network Height: " << network_height << std::endl;
+	  std::cout << (synced ? " Synced " : " Syncing ") << bc_height << "/" << network_height <<
+	  " (" << get_sync_percentage(bc_height, network_height) << "%) " << " Remaining " << (uint32_t)(network_height - bc_height) << " Blocks" << std::endl;
+	  std::cout << " Network Hashrate: " << get_mining_speed(hashrate) << std::endl;
+	  std::cout << " Top Block Index: " << m_core.getTopBlockIndex() << " v" << major_version << "." << minor_version << std::endl;
+	  std::cout << " Upgrade Time: " << get_upgrade_time(bc_height, upgrade_heigh) << std::endl;
+	  std::cout << " Difficulty: "<< difficulty << std::endl;
+	  std::cout << " Tx Pool Size: " << tx_pool_size << std::endl;
+	  std::cout << " Alt Blocks Count: " << alt_blocks_count << std::endl;
+	  std::cout << " Rpc Connections Count: " << rpc_conn << std::endl;
+	  std::cout << " Outgoing Connections Count: " << outgoing_connections_count << std::endl;
+	  std::cout << " Incoming Connections Count: " << incoming_connections_count << std::endl;
+	  std::cout << " White Peerlist Size: " << white_peerlist_size << std::endl;
+	  std::cout << " Grey Peerlist Size: " << grey_peerlist_size << std::endl;
+	  std::cout << " Uptime: " << (unsigned int)floor(uptime / 60.0 / 60.0 / 24.0) << "d " << (unsigned int)floor(fmod((uptime / 60.0 / 60.0), 24.0)) << "h " << 
+	  (unsigned int)floor(fmod((uptime / 60.0), 60.0)) << "m " << (unsigned int)fmod(uptime, 60.0) << "s" << std::endl;
+	  std::cout << std::endl;
+ 
+  return true;
+}
+
 //--------------------------------------------------------------------------------
 bool DaemonCommandsHandler::print_pl(const std::vector<std::string>& args) {
   m_srv.log_peerlist();

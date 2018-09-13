@@ -1,4 +1,6 @@
 // Copyright (c) 2012-2017, The CryptoNote developers, The Bytecoin developers
+// Copyright (c) 2016-2018, The Karbowanec developers
+// Copyright (c) 2018, The Newton Developers
 //
 // This file is part of Bytecoin.
 //
@@ -36,10 +38,12 @@ namespace Tools
     const std::string& password() const { return m_password; }
     void password(std::string&& val) { m_password = std::move(val); m_empty = false; }
     bool read_password();
+	bool read_password(bool verify);
+    bool read_and_validate();
 
   private:
     bool read_from_file();
-    bool read_from_tty();
+	bool read_from_tty(std::string& password);
 
   private:
     bool m_empty;

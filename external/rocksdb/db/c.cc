@@ -90,10 +90,8 @@ using rocksdb::LiveFileMetaData;
 using rocksdb::BackupEngine;
 using rocksdb::BackupableDBOptions;
 using rocksdb::BackupInfo;
-using rocksdb::BackupID;
 using rocksdb::RestoreOptions;
 using rocksdb::CompactRangeOptions;
-using rocksdb::BottommostLevelCompaction;
 using rocksdb::RateLimiter;
 using rocksdb::NewGenericRateLimiter;
 using rocksdb::PinnableSlice;
@@ -533,16 +531,8 @@ rocksdb_backup_engine_t* rocksdb_backup_engine_open(
 }
 
 void rocksdb_backup_engine_create_new_backup(rocksdb_backup_engine_t* be,
-                                             rocksdb_t* db,
-                                             char** errptr) {
+                                             rocksdb_t* db, char** errptr) {
   SaveError(errptr, be->rep->CreateNewBackup(db->rep));
-}
-
-void rocksdb_backup_engine_create_new_backup_flush(rocksdb_backup_engine_t* be,
-                                                   rocksdb_t* db,
-                                                   unsigned char flush_before_backup,
-                                                   char** errptr) {
-  SaveError(errptr, be->rep->CreateNewBackup(db->rep, flush_before_backup));
 }
 
 void rocksdb_backup_engine_purge_old_backups(rocksdb_backup_engine_t* be,
@@ -562,12 +552,6 @@ void rocksdb_restore_options_destroy(rocksdb_restore_options_t* opt) {
 void rocksdb_restore_options_set_keep_log_files(rocksdb_restore_options_t* opt,
                                                 int v) {
   opt->rep.keep_log_files = v;
-}
-
-
-void rocksdb_backup_engine_verify_backup(rocksdb_backup_engine_t* be,
-    uint32_t backup_id, char** errptr) {
-  SaveError(errptr, be->rep->VerifyBackup(static_cast<BackupID>(backup_id)));
 }
 
 void rocksdb_backup_engine_restore_db_from_latest_backup(
@@ -3110,11 +3094,6 @@ void rocksdb_compactoptions_destroy(rocksdb_compactoptions_t* opt) {
   delete opt;
 }
 
-void rocksdb_compactoptions_set_bottommost_level_compaction(
-    rocksdb_compactoptions_t* opt, unsigned char v) {
-  opt->rep.bottommost_level_compaction = static_cast<BottommostLevelCompaction>(v);
-}
-
 void rocksdb_compactoptions_set_exclusive_manual_compaction(
     rocksdb_compactoptions_t* opt, unsigned char v) {
   opt->rep.exclusive_manual_compaction = v;
@@ -3262,11 +3241,6 @@ void rocksdb_sstfilewriter_delete(rocksdb_sstfilewriter_t* writer,
 void rocksdb_sstfilewriter_finish(rocksdb_sstfilewriter_t* writer,
                                   char** errptr) {
   SaveError(errptr, writer->rep->Finish(nullptr));
-}
-
-void rocksdb_sstfilewriter_file_size(rocksdb_sstfilewriter_t* writer,
-                                  uint64_t* file_size) {
-  *file_size = writer->rep->FileSize();
 }
 
 void rocksdb_sstfilewriter_destroy(rocksdb_sstfilewriter_t* writer) {

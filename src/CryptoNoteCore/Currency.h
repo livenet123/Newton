@@ -1,4 +1,6 @@
 // Copyright (c) 2012-2017, The CryptoNote developers, The Bytecoin developers
+// Copyright (c) 2016-2018, The Karbowanec developers
+// Copyright (c) 2018, The Newton Developers
 //
 // This file is part of Bytecoin.
 //
@@ -23,6 +25,8 @@
 #include <boost/utility.hpp>
 #include "../CryptoNoteConfig.h"
 #include "../crypto/hash.h"
+#include "../crypto/crypto-ops.h"
+#include "../crypto/crypto.h"
 #include "../Logging/LoggerRef.h"
 #include "CachedBlock.h"
 #include "CryptoNoteBasic.h"
@@ -39,13 +43,40 @@ public:
   size_t maxTxSize() const { return m_maxTxSize; }
   uint64_t publicAddressBase58Prefix() const { return m_publicAddressBase58Prefix; }
   uint32_t minedMoneyUnlockWindow() const { return m_minedMoneyUnlockWindow; }
+  size_t expectedNumberOfBlocksPerDay() const { return m_expectedNumberOfBlocksPerDay; }
 
   size_t timestampCheckWindow() const { return m_timestampCheckWindow; }
+  size_t timestampCheckWindowV2() const { return m_timestampCheckWindowV2; }
+  size_t timestampCheckWindow(uint32_t blockHeight) const{
+    if (blockHeight >= zawyLWMA2DifficultyBlockIndex())
+        {
+          return timestampCheckWindowV2();
+        }
+		else
+        {
+          return timestampCheckWindow();
+        }
+    }
+		
   uint64_t blockFutureTimeLimit() const { return m_blockFutureTimeLimit; }
-
+  uint64_t blockFutureTimeLimitV2() const { return m_blockFutureTimeLimitV2; }
+  uint64_t blockFutureTimeLimit(uint32_t blockHeight) const{
+    if (blockHeight >= zawyLWMA2DifficultyBlockIndex())
+       {
+		return blockFutureTimeLimitV2();
+       }
+       else
+       {
+		   return blockFutureTimeLimit();
+        }
+  }
+  
   uint64_t moneySupply() const { return m_moneySupply; }
   unsigned int emissionSpeedFactor() const { return m_emissionSpeedFactor; }
   size_t cryptonoteCoinVersion() const { return m_cryptonoteCoinVersion; }
+
+  uint32_t zawyLWMA2DifficultyBlockIndex() const { return m_zawyLWMA2DifficultyBlockIndex; }
+  size_t zawyLWMA2DifficultyN() const { return m_zawyLWMA2DifficultyN; }
 
   size_t rewardBlocksWindow() const { return m_rewardBlocksWindow; }
   size_t blockGrantedFullRewardZone() const { return m_blockGrantedFullRewardZone; }
@@ -61,13 +92,14 @@ public:
 
   uint64_t difficultyTarget() const { return m_difficultyTarget; }
   size_t difficultyWindow() const { return m_difficultyWindow; }
-size_t difficultyWindowByBlockVersion(uint8_t blockMajorVersion) const;
+  size_t difficultyWindowByBlockVersion(uint8_t blockMajorVersion) const;
   size_t difficultyLag() const { return m_difficultyLag; }
-size_t difficultyLagByBlockVersion(uint8_t blockMajorVersion) const;
+  size_t difficultyLagByBlockVersion(uint8_t blockMajorVersion) const;
   size_t difficultyCut() const { return m_difficultyCut; }
-size_t difficultyCutByBlockVersion(uint8_t blockMajorVersion) const;
+  size_t difficultyCutByBlockVersion(uint8_t blockMajorVersion) const;
+  size_t difficultyBlocksCountByBlockVersion(uint8_t blockMajorVersion, uint32_t height) const;
+
   size_t difficultyBlocksCount() const { return m_difficultyWindow + m_difficultyLag; }
-size_t difficultyBlocksCountByBlockVersion(uint8_t blockMajorVersion) const;
 
   size_t maxBlockSizeInitial() const { return m_maxBlockSizeInitial; }
   uint64_t maxBlockSizeGrowthSpeedNumerator() const { return m_maxBlockSizeGrowthSpeedNumerator; }
@@ -123,8 +155,10 @@ size_t difficultyBlocksCountByBlockVersion(uint8_t blockMajorVersion) const;
   std::string formatAmount(int64_t amount) const;
   bool parseAmount(const std::string& str, uint64_t& amount) const;
 
-  Difficulty nextDifficulty(std::vector<uint64_t> timestamps, std::vector<Difficulty> cumulativeDifficulties) const;
-Difficulty nextDifficulty(uint8_t version, uint32_t blockIndex, std::vector<uint64_t> timestamps, std::vector<Difficulty> cumulativeDifficulties) const;
+  Difficulty nextDifficulty(std::vector<uint64_t> timestamps, std::vector<Difficulty> cumulativeDifficulties) const; 
+  Difficulty getNextDifficulty(uint8_t version, uint32_t blockIndex, std::vector<uint64_t> timestamps, std::vector<Difficulty> cumulativeDifficulties) const;
+  Difficulty nextDifficultyDefault(uint8_t version, uint32_t blockIndex, std::vector<uint64_t> timestamps, std::vector<Difficulty> cumulativeDifficulties) const;
+  Difficulty nextDifficultyV2(uint8_t version, uint32_t blockIndex, std::vector<uint64_t> timestamps, std::vector<Difficulty> cumulativeDifficulties) const; 
 
   bool checkProofOfWorkV1(Crypto::cn_context& context, const CachedBlock& block, Difficulty currentDifficulty) const;
   bool checkProofOfWorkV2(Crypto::cn_context& context, const CachedBlock& block, Difficulty currentDifficulty) const;
@@ -133,6 +167,8 @@ Difficulty nextDifficulty(uint8_t version, uint32_t blockIndex, std::vector<uint
   Currency(Currency&& currency);
 
   size_t getApproximateMaximumInputCount(size_t transactionSize, size_t outputCount, size_t mixinCount) const;
+
+  static const std::vector<uint64_t> PRETTY_AMOUNTS;
 
 private:
   Currency(Logging::ILogger& log) : logger(log, "currency") {
@@ -148,14 +184,20 @@ private:
   size_t m_maxTxSize;
   uint64_t m_publicAddressBase58Prefix;
   uint32_t m_minedMoneyUnlockWindow;
+  size_t m_expectedNumberOfBlocksPerDay;
 
   size_t m_timestampCheckWindow;
+  size_t m_timestampCheckWindowV2;
   uint64_t m_blockFutureTimeLimit;
-
+  uint64_t m_blockFutureTimeLimitV2;
+  
   uint64_t m_moneySupply;
   unsigned int m_emissionSpeedFactor;
   size_t m_cryptonoteCoinVersion;
-
+    
+  uint32_t m_zawyLWMA2DifficultyBlockIndex;
+  size_t m_zawyLWMA2DifficultyN;
+  
   size_t m_rewardBlocksWindow;
   size_t m_blockGrantedFullRewardZone;
   size_t m_minerTxBlobReservedSize;
@@ -197,8 +239,6 @@ private:
   std::string m_blockIndexesFileName;
   std::string m_txPoolFileName;
 
-  static const std::vector<uint64_t> PRETTY_AMOUNTS;
-
   bool m_testnet;
   bool m_isBlockexplorer;
 
@@ -228,13 +268,20 @@ public:
   CurrencyBuilder& maxTxSize(size_t val) { m_currency.m_maxTxSize = val; return *this; }
   CurrencyBuilder& publicAddressBase58Prefix(uint64_t val) { m_currency.m_publicAddressBase58Prefix = val; return *this; }
   CurrencyBuilder& minedMoneyUnlockWindow(uint32_t val) { m_currency.m_minedMoneyUnlockWindow = val; return *this; }
+  CurrencyBuilder& expectedNumberOfBlocksPerDay(size_t val) { m_currency.m_expectedNumberOfBlocksPerDay = val; return *this; }
 
-  CurrencyBuilder& timestampCheckWindow(size_t val) { m_currency.m_timestampCheckWindow = val; return *this; }
-  CurrencyBuilder& blockFutureTimeLimit(uint64_t val) { m_currency.m_blockFutureTimeLimit = val; return *this; }
+  CurrencyBuilder& timestampCheckWindow  (size_t val)   { m_currency.m_timestampCheckWindow = val; return *this; }
+  CurrencyBuilder& timestampCheckWindowV2(size_t val) { m_currency.m_timestampCheckWindowV2 = val; return *this; }
+  CurrencyBuilder& blockFutureTimeLimit  (uint64_t val) { m_currency.m_blockFutureTimeLimit = val; return *this; }
+  CurrencyBuilder& blockFutureTimeLimitV2(uint64_t val) { m_currency.m_blockFutureTimeLimitV2 = val; return *this; }
+
 
   CurrencyBuilder& moneySupply(uint64_t val) { m_currency.m_moneySupply = val; return *this; }
   CurrencyBuilder& emissionSpeedFactor(unsigned int val);
   CurrencyBuilder& cryptonoteCoinVersion(size_t val) { m_currency.m_cryptonoteCoinVersion = val; return *this; }
+   
+  CurrencyBuilder& zawyLWMA2DifficultyBlockIndex(uint32_t val) { m_currency.m_zawyLWMA2DifficultyBlockIndex = val; return *this; }
+  CurrencyBuilder& zawyLWMA2DifficultyN(size_t val) { m_currency.m_zawyLWMA2DifficultyN = val; return *this; }
 
   CurrencyBuilder& rewardBlocksWindow(size_t val) { m_currency.m_rewardBlocksWindow = val; return *this; }
   CurrencyBuilder& blockGrantedFullRewardZone(size_t val) { m_currency.m_blockGrantedFullRewardZone = val; return *this; }

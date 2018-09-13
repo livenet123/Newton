@@ -32,7 +32,7 @@ class PlainTableBuilder: public TableBuilder {
   // will be part of level specified by 'level'.  A value of -1 means
   // that the caller does not know which level the output file will reside.
   PlainTableBuilder(
-      const ImmutableCFOptions& ioptions, const MutableCFOptions& moptions,
+      const ImmutableCFOptions& ioptions,
       const std::vector<std::unique_ptr<IntTblPropCollectorFactory>>*
           int_tbl_prop_collector_factories,
       uint32_t column_family_id, WritableFileWriter* file,
@@ -79,7 +79,6 @@ class PlainTableBuilder: public TableBuilder {
  private:
   Arena arena_;
   const ImmutableCFOptions& ioptions_;
-  const MutableCFOptions& moptions_;
   std::vector<std::unique_ptr<IntTblPropCollector>>
       table_properties_collectors_;
 

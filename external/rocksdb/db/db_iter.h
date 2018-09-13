@@ -30,7 +30,6 @@ class InternalIterator;
 // into appropriate user keys.
 extern Iterator* NewDBIterator(Env* env, const ReadOptions& read_options,
                                const ImmutableCFOptions& cf_options,
-                               const MutableCFOptions& mutable_cf_options,
                                const Comparator* user_key_comparator,
                                InternalIterator* internal_iter,
                                const SequenceNumber& sequence,
@@ -72,7 +71,6 @@ class ArenaWrappedDBIter : public Iterator {
 
   void Init(Env* env, const ReadOptions& read_options,
             const ImmutableCFOptions& cf_options,
-            const MutableCFOptions& mutable_cf_options,
             const SequenceNumber& sequence,
             uint64_t max_sequential_skip_in_iterations, uint64_t version_number,
             ReadCallback* read_callback, bool allow_blob, bool allow_refresh);
@@ -104,8 +102,7 @@ class ArenaWrappedDBIter : public Iterator {
 // be supported.
 extern ArenaWrappedDBIter* NewArenaWrappedDbIterator(
     Env* env, const ReadOptions& read_options,
-    const ImmutableCFOptions& cf_options,
-    const MutableCFOptions& mutable_cf_options, const SequenceNumber& sequence,
+    const ImmutableCFOptions& cf_options, const SequenceNumber& sequence,
     uint64_t max_sequential_skip_in_iterations, uint64_t version_number,
     ReadCallback* read_callback, DBImpl* db_impl = nullptr,
     ColumnFamilyData* cfd = nullptr, bool allow_blob = false,

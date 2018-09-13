@@ -72,8 +72,14 @@ inline void FullFilterBlockBuilder::AddPrefix(const Slice& key) {
   }
 }
 
+void FullFilterBlockBuilder::Reset() {
+  last_whole_key_recorded_ = false;
+  last_prefix_recorded_ = false;
+}
+
 Slice FullFilterBlockBuilder::Finish(const BlockHandle& /*tmp*/,
                                      Status* status) {
+  Reset();
   // In this impl we ignore BlockHandle
   *status = Status::OK();
   if (num_added_ != 0) {
@@ -103,10 +109,9 @@ FullFilterBlockReader::FullFilterBlockReader(
   block_contents_ = std::move(contents);
 }
 
-bool FullFilterBlockReader::KeyMayMatch(
-    const Slice& key, const SliceTransform* /*prefix_extractor*/,
-    uint64_t block_offset, const bool /*no_io*/,
-    const Slice* const /*const_ikey_ptr*/) {
+bool FullFilterBlockReader::KeyMayMatch(const Slice& key, uint64_t block_offset,
+                                        const bool /*no_io*/,
+                                        const Slice* const /*const_ikey_ptr*/) {
 #ifdef NDEBUG
   (void)block_offset;
 #endif
@@ -118,8 +123,7 @@ bool FullFilterBlockReader::KeyMayMatch(
 }
 
 bool FullFilterBlockReader::PrefixMayMatch(
-    const Slice& prefix, const SliceTransform* /* prefix_extractor */,
-    uint64_t block_offset, const bool /*no_io*/,
+    const Slice& prefix, uint64_t block_offset, const bool /*no_io*/,
     const Slice* const /*const_ikey_ptr*/) {
 #ifdef NDEBUG
   (void)block_offset;

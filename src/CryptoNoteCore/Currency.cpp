@@ -1,4 +1,6 @@
 // Copyright (c) 2012-2017, The CryptoNote developers, The Bytecoin developers
+// Copyright (c) 2016-2018, The Karbowanec developers
+// Copyright (c) 2018, The Newton Developers
 //
 // This file is part of Bytecoin.
 //
@@ -17,12 +19,17 @@
 
 #include "Currency.h"
 #include <cctype>
+#include <math.h>
+
 #include <boost/algorithm/string/trim.hpp>
+#include <boost/math/special_functions/round.hpp>
 #include <boost/lexical_cast.hpp>
+
 #include "../Common/Base58.h"
 #include "../Common/int-util.h"
 #include "../Common/StringTools.h"
-
+#include "../crypto/crypto-ops.h"
+#include "../crypto/crypto.h"
 #include "Account.h"
 #include "CryptoNoteBasicImpl.h"
 #include "CryptoNoteFormatUtils.h"
@@ -74,8 +81,9 @@ bool Currency::init() {
   }
 
   if (isTestnet()) {
-    m_upgradeHeightV2 = 0;
-    m_upgradeHeightV3 = static_cast<uint32_t>(-1);
+	m_zawyLWMA2DifficultyBlockIndex = 3;
+    m_upgradeHeightV2 = 3;
+    m_upgradeHeightV3 = 600000; //static_cast<uint32_t>(-1);	
     m_blocksFileName = "testnet_" + m_blocksFileName;
     m_blockIndexesFileName = "testnet_" + m_blockIndexesFileName;
     m_txPoolFileName = "testnet_" + m_txPoolFileName;
@@ -148,7 +156,13 @@ size_t Currency::difficultyCutByBlockVersion(uint8_t blockMajorVersion) const {
   }
 }
 
-size_t Currency::difficultyBlocksCountByBlockVersion(uint8_t blockMajorVersion) const {
+size_t Currency::difficultyBlocksCountByBlockVersion(uint8_t blockMajorVersion, uint32_t height) const {
+	
+	if (height >= m_zawyLWMA2DifficultyBlockIndex)
+    {
+        return CryptoNote::parameters::DIFFICULTY_BLOCKS_COUNT_V2;
+    }
+	
   return difficultyWindowByBlockVersion(blockMajorVersion) + difficultyLagByBlockVersion(blockMajorVersion);
 }
 
@@ -163,7 +177,7 @@ size_t Currency::blockGrantedFullRewardZoneByBlockVersion(uint8_t blockMajorVers
 }
 
 uint32_t Currency::upgradeHeight(uint8_t majorVersion) const {
-  if (majorVersion == BLOCK_MAJOR_VERSION_2) {
+  if(majorVersion == BLOCK_MAJOR_VERSION_2) {
     return m_upgradeHeightV2;
   } else if (majorVersion == BLOCK_MAJOR_VERSION_3) {
     return m_upgradeHeightV3;
@@ -432,8 +446,7 @@ bool Currency::parseAmount(const std::string& str, uint64_t& amount) const {
   return Common::fromString(strAmount, amount);
 }
 
-Difficulty Currency::nextDifficulty(std::vector<uint64_t> timestamps,
-  std::vector<Difficulty> cumulativeDifficulties) const {
+Difficulty Currency::nextDifficulty(std::vector<uint64_t> timestamps, std::vector<Difficulty> cumulativeDifficulties) const {
   assert(m_difficultyWindow >= 2);
 
   if (timestamps.size() > m_difficultyWindow) {
@@ -477,8 +490,70 @@ Difficulty Currency::nextDifficulty(std::vector<uint64_t> timestamps,
   return (low + timeSpan - 1) / timeSpan;
 }
 
-Difficulty Currency::nextDifficulty(uint8_t version, uint32_t blockIndex, std::vector<uint64_t> timestamps,
-  std::vector<Difficulty> cumulativeDifficulties) const {
+Difficulty Currency::getNextDifficulty(uint8_t version, uint32_t blockIndex, std::vector<uint64_t> timestamps, std::vector<Difficulty> cumulativeDifficulties) const {
+
+	if (blockIndex >= m_zawyLWMA2DifficultyBlockIndex)
+	{
+		return nextDifficultyV2(version, blockIndex, timestamps, cumulativeDifficulties);
+	}
+	else
+	{
+		return nextDifficultyDefault(version, blockIndex, timestamps, cumulativeDifficulties);
+	}
+}
+
+Difficulty Currency::nextDifficultyV2(uint8_t version, uint32_t blockIndex, std::vector<uint64_t> timestamps,
+std::vector<Difficulty> cumulativeDifficulties) const {
+	
+// LWMA-2 difficulty algorithm 
+// Copyright (c) 2017-2018 Zawy, MIT License
+// https://github.com/zawy12/difficulty-algorithms/issues/3
+
+	int64_t T    = static_cast<int64_t>(m_difficultyTarget); // DIFFICULTY_TARGET = 120	sec
+	int64_t N    = static_cast<int64_t>(m_zawyLWMA2DifficultyN); // DIFFICULTY_WINDOW_V2 = 60
+	int64_t FTL  = static_cast<int64_t>(m_blockFutureTimeLimitV2); // (3 * DIFFICULTY_TARGET)= 360 sec
+        int64_t LWMA(0), solveTime(0), sum_3_ST(0);
+        Difficulty next_D, prev_D;
+               
+	 if (timestamps.size() > N + 1) {
+		   timestamps.resize(N + 1);
+		    cumulativeDifficulties.resize(N + 1);
+		}
+
+		   size_t n = timestamps.size();
+		   assert(n == cumulativeDifficulties.size());
+		   assert(n <= N);
+		    if (n <= 1)
+		      return 1;
+		
+		    uint64_t initial_difficulty_guess = 1000; 
+		    if (timestamps.size() <= static_cast<uint64_t>(N)) {
+		     return initial_difficulty_guess;
+	      }
+
+            // Loop through N most recent blocks.
+            for (int64_t i = 1; i <= N; i++) {					
+                    solveTime = std::max(-FTL, std::min( static_cast<int64_t>(timestamps[i]) - static_cast<int64_t>(timestamps[i - 1]), 6 * T));
+                    LWMA += solveTime * i;
+                if ( i > N - 3 ) { sum_3_ST += solveTime; }
+              }
+                				 
+		next_D = (static_cast<int64_t>(cumulativeDifficulties[N] - cumulativeDifficulties[0]) * T * (N + 1) * 99) / (100 * 2 * LWMA);				   
+                prev_D = cumulativeDifficulties[N] - cumulativeDifficulties[N - 1];
+				   
+		// Make sure we don't divide by zero if 50x attacker 
+		next_D = std::max((prev_D * 75)/100, std::min(next_D, (prev_D * 133)/100));
+				   
+                if ( sum_3_ST < (8 * T)/10) {
+                     next_D = (prev_D * 110)/100;
+                }
+				
+                   
+	    return static_cast<uint64_t>(next_D);
+    }
+                
+
+Difficulty Currency::nextDifficultyDefault(uint8_t version, uint32_t blockIndex, std::vector<uint64_t> timestamps, std::vector<Difficulty> cumulativeDifficulties) const {
 
   size_t c_difficultyWindow = difficultyWindowByBlockVersion(version);
   size_t c_difficultyCut = difficultyCutByBlockVersion(version);
@@ -609,8 +684,11 @@ m_maxBlockBlobSize(currency.m_maxBlockBlobSize),
 m_maxTxSize(currency.m_maxTxSize),
 m_publicAddressBase58Prefix(currency.m_publicAddressBase58Prefix),
 m_minedMoneyUnlockWindow(currency.m_minedMoneyUnlockWindow),
+m_expectedNumberOfBlocksPerDay(currency.m_expectedNumberOfBlocksPerDay),
 m_timestampCheckWindow(currency.m_timestampCheckWindow),
+m_timestampCheckWindowV2(currency.m_timestampCheckWindowV2),
 m_blockFutureTimeLimit(currency.m_blockFutureTimeLimit),
+m_blockFutureTimeLimitV2(currency.m_blockFutureTimeLimitV2),
 m_moneySupply(currency.m_moneySupply),
 m_emissionSpeedFactor(currency.m_emissionSpeedFactor),
 m_rewardBlocksWindow(currency.m_rewardBlocksWindow),
@@ -645,6 +723,10 @@ m_blocksFileName(currency.m_blocksFileName),
 m_blockIndexesFileName(currency.m_blockIndexesFileName),
 m_txPoolFileName(currency.m_txPoolFileName),
 m_cryptonoteCoinVersion(currency.m_cryptonoteCoinVersion),
+
+m_zawyLWMA2DifficultyBlockIndex(currency.m_zawyLWMA2DifficultyBlockIndex),
+m_zawyLWMA2DifficultyN(currency.m_zawyLWMA2DifficultyN),
+
 m_testnet(currency.m_testnet),
 genesisBlockTemplate(std::move(currency.genesisBlockTemplate)),
 cachedGenesisBlock(new CachedBlock(genesisBlockTemplate)),
@@ -657,13 +739,20 @@ CurrencyBuilder::CurrencyBuilder(Logging::ILogger& log) : m_currency(log) {
   maxTxSize(parameters::CRYPTONOTE_MAX_TX_SIZE);
   publicAddressBase58Prefix(parameters::CRYPTONOTE_PUBLIC_ADDRESS_BASE58_PREFIX);
   minedMoneyUnlockWindow(parameters::CRYPTONOTE_MINED_MONEY_UNLOCK_WINDOW);
+  expectedNumberOfBlocksPerDay(parameters::EXPECTED_NUMBER_OF_BLOCKS_PER_DAY);
 
   timestampCheckWindow(parameters::BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW);
-  blockFutureTimeLimit(parameters::CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT);
+  timestampCheckWindowV2(parameters::BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW_V2);
+
+  blockFutureTimeLimit(parameters::CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT);  
+  blockFutureTimeLimitV2(parameters::CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V2);
 
   moneySupply(parameters::MONEY_SUPPLY);
   emissionSpeedFactor(parameters::EMISSION_SPEED_FACTOR);
-cryptonoteCoinVersion(parameters::CRYPTONOTE_COIN_VERSION);
+  cryptonoteCoinVersion(parameters::CRYPTONOTE_COIN_VERSION);
+
+  zawyLWMA2DifficultyBlockIndex(parameters::ZAWY_LWMA2_DIFFICULTY_BLOCK_INDEX);
+  zawyLWMA2DifficultyN(parameters::ZAWY_LWMA2_DIFFICULTY_N);
 
   rewardBlocksWindow(parameters::CRYPTONOTE_REWARD_BLOCKS_WINDOW);
   blockGrantedFullRewardZone(parameters::CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE);

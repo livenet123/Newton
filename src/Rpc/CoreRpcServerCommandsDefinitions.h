@@ -1,4 +1,6 @@
 // Copyright (c) 2012-2017, The CryptoNote developers, The Bytecoin developers
+// Copyright (c) 2016-2018, The Karbowanec developers
+// Copyright (c) 2018, The Newton Developers
 //
 // This file is part of Bytecoin.
 //
@@ -266,6 +268,9 @@ struct COMMAND_RPC_GET_INFO {
   struct response {
     std::string status;
     uint64_t height;
+	uint32_t network_height;
+	std::string version;
+	std::string top_block_hash;
     uint64_t difficulty;
     uint64_t tx_count;
     uint64_t tx_pool_size;
@@ -274,11 +279,21 @@ struct COMMAND_RPC_GET_INFO {
     uint64_t incoming_connections_count;
     uint64_t white_peerlist_size;
     uint64_t grey_peerlist_size;
+	uint64_t rpc_connections_count;
+	uint8_t major_version;
+    uint8_t minor_version;
+	bool testnet;
+	bool synced;
+    uint64_t start_time;
+	std::string fee_address;
     uint32_t last_known_block_index;
 
     void serialize(ISerializer &s) {
       KV_MEMBER(status)
       KV_MEMBER(height)
+      KV_MEMBER(network_height)
+	  KV_MEMBER(top_block_hash)
+	  KV_MEMBER(version)
       KV_MEMBER(difficulty)
       KV_MEMBER(tx_count)
       KV_MEMBER(tx_pool_size)
@@ -287,6 +302,13 @@ struct COMMAND_RPC_GET_INFO {
       KV_MEMBER(incoming_connections_count)
       KV_MEMBER(white_peerlist_size)
       KV_MEMBER(grey_peerlist_size)
+	  KV_MEMBER(rpc_connections_count)
+	  KV_MEMBER(major_version)
+      KV_MEMBER(minor_version)
+      KV_MEMBER(start_time)
+	  KV_MEMBER(fee_address)
+	  KV_MEMBER(testnet)
+	  KV_MEMBER(synced)
       KV_MEMBER(last_known_block_index)
     }
   };
@@ -304,6 +326,34 @@ struct COMMAND_RPC_STOP_DAEMON {
   typedef STATUS_STRUCT response;
 };
 
+struct COMMAND_RPC_GET_PEER_LIST {
+	typedef EMPTY_STRUCT request;
+
+	struct response {
+		std::vector<std::string> peers;
+		std::string status;
+
+		void serialize(ISerializer &s) {
+			KV_MEMBER(peers)
+			KV_MEMBER(status)
+		}
+	};
+};
+
+struct COMMAND_RPC_GET_FEE_ADDRESS {
+  typedef EMPTY_STRUCT request;
+	
+  struct response {
+		std::string fee_address;
+		std::string status;
+		
+	void serialize(ISerializer &s) {
+		KV_MEMBER(fee_address)
+		KV_MEMBER(status)
+		}
+    };
+};
+
 //
 struct COMMAND_RPC_GETBLOCKCOUNT {
   typedef std::vector<std::string> request;
@@ -313,9 +363,9 @@ struct COMMAND_RPC_GETBLOCKCOUNT {
     std::string status;
 
     void serialize(ISerializer &s) {
-      KV_MEMBER(count)
-      KV_MEMBER(status)
-    }
+       KV_MEMBER(count)
+       KV_MEMBER(status)
+     }
   };
 };
 
@@ -445,6 +495,7 @@ struct f_block_short_response {
   uint32_t height;
   std::string hash;
   uint64_t tx_count;
+  Difficulty difficulty;
   uint64_t cumul_size;
 
   void serialize(ISerializer &s) {
@@ -453,6 +504,7 @@ struct f_block_short_response {
     KV_MEMBER(hash)
     KV_MEMBER(cumul_size)
     KV_MEMBER(tx_count)
+    KV_MEMBER(difficulty)
   }
 };
 
@@ -662,6 +714,114 @@ struct COMMAND_RPC_QUERY_BLOCKS_LITE {
       KV_MEMBER(fullOffset)
       KV_MEMBER(items)
     }
+  };
+};
+
+struct COMMAND_RPC_GEN_PAYMENT_ID {
+  typedef EMPTY_STRUCT request;
+  
+  struct response {
+	  std::string payment_id;
+
+	  void serialize(ISerializer &s) {
+		  KV_MEMBER(payment_id)
+	  }
+  };
+};
+
+struct K_COMMAND_RPC_GET_TRANSACTIONS_BY_PAYMENT_ID {
+	struct request {
+		std::string payment_id;
+
+		void serialize(ISerializer &s) {
+			KV_MEMBER(payment_id)
+		}
+	};
+
+	struct response {
+		std::vector<f_transaction_short_response> transactions;
+		std::string status;
+
+		void serialize(ISerializer &s) {
+			KV_MEMBER(transactions)
+				KV_MEMBER(status)
+		}
+	};
+};
+
+struct K_COMMAND_RPC_CHECK_TX_WITH_PRIVATE_VIEW_KEY {
+	struct request {
+		std::string txid;
+		std::string view_key;
+		std::string address;
+
+		void serialize(ISerializer &s) {
+			KV_MEMBER(txid)
+				KV_MEMBER(view_key)
+				KV_MEMBER(address)
+		}
+	};
+
+	struct response {
+		uint64_t amount;
+		std::vector<TransactionOutput> outputs;
+		std::string status;
+
+		void serialize(ISerializer &s) {
+			KV_MEMBER(amount)
+				KV_MEMBER(outputs)
+				KV_MEMBER(status)
+		}
+	};
+};
+
+struct COMMAND_RPC_VALIDATE_ADDRESS {
+  struct request {
+    std::string address;
+
+    void serialize(ISerializer &s) {
+      KV_MEMBER(address)
+    }
+  };
+
+  struct response {
+    bool isvalid;
+    std::string address;
+    std::string spendPublicKey;
+    std::string viewPublicKey;
+    std::string status;
+
+    void serialize(ISerializer &s) {
+      KV_MEMBER(isvalid)
+      KV_MEMBER(address)
+      KV_MEMBER(spendPublicKey)
+      KV_MEMBER(viewPublicKey)
+      KV_MEMBER(status)
+    }
+  };
+};
+
+struct COMMAND_RPC_VERIFY_MESSAGE {
+  struct request {
+	std::string message;
+	std::string address;
+	std::string signature;
+
+	void serialize(ISerializer &s) {
+	  KV_MEMBER(message)
+	  KV_MEMBER(address)
+	  KV_MEMBER(signature)
+	}
+  };
+
+  struct response {
+	bool sig_valid;
+	 std::string status;
+
+	void serialize(ISerializer &s) {
+	  KV_MEMBER(sig_valid)
+	  KV_MEMBER(status)
+	}
   };
 };
 

@@ -19,9 +19,13 @@
 
 #include <ctime>
 #include <cstdlib>
+#include <numeric>
 
 #include <boost/iterator/iterator_facade.hpp>
-
+#include <boost/foreach.hpp>
+#include <algorithm>
+#include <cassert>
+#include <cstring> // memcpy
 #include <Common/ShuffleGenerator.h>
 
 #include "BlockchainUtils.h"
@@ -30,8 +34,10 @@
 
 #include <CryptoNoteCore/BlockchainStorage.h>
 #include <CryptoNoteCore/CryptoNoteTools.h>
+#include <CryptoNoteCore/CryptoNoteFormatUtils.h>
 #include <CryptoNoteCore/CryptoNoteBasicImpl.h>
 #include "CryptoNoteCore/TransactionExtra.h"
+
 
 namespace CryptoNote {
 
@@ -1134,10 +1140,10 @@ Difficulty DatabaseBlockchainCache::getDifficultyForNextBlock() const {
 Difficulty DatabaseBlockchainCache::getDifficultyForNextBlock(uint32_t blockIndex) const {
   assert(blockIndex <= getTopBlockIndex());
   uint8_t nextBlockMajorVersion = getBlockMajorVersionForHeight(blockIndex+1);
-  auto timestamps = getLastTimestamps(currency.difficultyBlocksCountByBlockVersion(nextBlockMajorVersion), blockIndex, UseGenesis{false});
+  auto timestamps = getLastTimestamps(currency.difficultyBlocksCountByBlockVersion(nextBlockMajorVersion, blockIndex), blockIndex, UseGenesis{false});
   auto commulativeDifficulties =
-      getLastCumulativeDifficulties(currency.difficultyBlocksCountByBlockVersion(nextBlockMajorVersion), blockIndex, UseGenesis{false});
-  return currency.nextDifficulty(nextBlockMajorVersion, blockIndex, std::move(timestamps), std::move(commulativeDifficulties));
+      getLastCumulativeDifficulties(currency.difficultyBlocksCountByBlockVersion(nextBlockMajorVersion, blockIndex), blockIndex, UseGenesis{false});
+  return currency.getNextDifficulty(nextBlockMajorVersion, blockIndex, std::move(timestamps), std::move(commulativeDifficulties));
 }
 
 Difficulty DatabaseBlockchainCache::getCurrentCumulativeDifficulty() const {

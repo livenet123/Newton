@@ -1,4 +1,6 @@
 // Copyright (c) 2012-2017, The CryptoNote developers, The Bytecoin developers
+// Copyright (c) 2016-2018, The Karbowanec developers
+// Copyright (c) 2018, The Newton Developers.
 //
 // This file is part of Bytecoin.
 //
@@ -46,6 +48,7 @@
 #include "Wallet/WalletErrors.h"
 #include "Wallet/WalletUtils.h"
 #include "WalletServiceErrorCategory.h"
+
 
 namespace PaymentService {
 
@@ -762,7 +765,13 @@ std::error_code WalletService::getTransactions(const std::vector<std::string>& a
 
     Crypto::Hash blockHash = parseHash(blockHashString, logger);
 
-    transactions = getRpcTransactions(blockHash, blockCount, transactionFilter);
+    std::vector<TransactionsInBlockRpcInfo> txs  = getRpcTransactions(blockHash, blockCount, transactionFilter);
+	for (TransactionsInBlockRpcInfo& b : txs){
+		for (TransactionRpcInfo& t : b.transactions) {
+			t.confirmations = (t.blockIndex != CryptoNote::UNCONFIRMED_TRANSACTION_GLOBAL_OUTPUT_INDEX ? wallet.getBlockCount() - t.blockIndex : 0);
+		}
+	}
+	transactions = txs;
   } catch (std::system_error& x) {
     logger(Logging::WARNING, Logging::BRIGHT_YELLOW) << "Error while getting transactions: " << x.what();
     return x.code();
@@ -786,7 +795,13 @@ std::error_code WalletService::getTransactions(const std::vector<std::string>& a
 
     TransactionsInBlockInfoFilter transactionFilter(addresses, paymentId);
 
-    transactions = getRpcTransactions(firstBlockIndex, blockCount, transactionFilter);
+    std::vector<TransactionsInBlockRpcInfo> txs = getRpcTransactions(firstBlockIndex, blockCount, transactionFilter);
+	for (TransactionsInBlockRpcInfo& b : txs){
+		for (TransactionRpcInfo& t : b.transactions) {
+			t.confirmations = (t.blockIndex != CryptoNote::UNCONFIRMED_TRANSACTION_GLOBAL_OUTPUT_INDEX ? wallet.getBlockCount() - t.blockIndex : 0);
+		}
+	}
+	transactions = txs;
   } catch (std::system_error& x) {
     logger(Logging::WARNING, Logging::BRIGHT_YELLOW) << "Error while getting transactions: " << x.what();
     return x.code();
@@ -810,7 +825,9 @@ std::error_code WalletService::getTransaction(const std::string& transactionHash
       return make_error_code(CryptoNote::error::OBJECT_NOT_FOUND);
     }
 
-    transaction = convertTransactionWithTransfersToTransactionRpcInfo(transactionWithTransfers);
+    TransactionRpcInfo tempTrans = convertTransactionWithTransfersToTransactionRpcInfo(transactionWithTransfers);
+	tempTrans.confirmations = (transactionWithTransfers.transaction.blockHeight != CryptoNote::UNCONFIRMED_TRANSACTION_GLOBAL_OUTPUT_INDEX ? wallet.getBlockCount() - transactionWithTransfers.transaction.blockHeight : 0);
+	transaction = tempTrans;
   } catch (std::system_error& x) {
     logger(Logging::WARNING, Logging::BRIGHT_YELLOW) << "Error while getting transaction: " << x.what();
     return x.code();
@@ -1069,6 +1086,33 @@ std::error_code WalletService::getStatus(uint32_t& blockCount, uint32_t& knownBl
   }
 
   return std::error_code();
+}
+
+std::error_code WalletService::validateAddress(const std::string& address, bool& isvalid, std::string& _address, std::string& spendPublicKey, std::string& viewPublicKey) {
+	try {
+		System::EventLock lk(readyEvent);
+
+		CryptoNote::AccountPublicAddress acc = boost::value_initialized<CryptoNote::AccountPublicAddress>();
+		if (currency.parseAccountAddressString(address, acc)) {
+			isvalid = true;
+			_address = currency.accountAddressAsString(acc);
+			spendPublicKey = Common::podToHex(acc.spendPublicKey);
+			viewPublicKey = Common::podToHex(acc.viewPublicKey);
+		}
+		else {
+			isvalid = false;
+		}
+	}
+	catch (std::system_error& x) {
+		logger(Logging::WARNING, Logging::BRIGHT_YELLOW) << "Error while validating address: " << x.what();
+		return x.code();
+	}
+	catch (std::exception& x) {
+		logger(Logging::WARNING, Logging::BRIGHT_YELLOW) << "Error while validating address: " << x.what();
+		return make_error_code(CryptoNote::error::BAD_ADDRESS);
+	}
+
+	return std::error_code();
 }
 
 std::error_code WalletService::sendFusionTransaction(uint64_t threshold, uint32_t anonymity, const std::vector<std::string>& addresses,

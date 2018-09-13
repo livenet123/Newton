@@ -1,5 +1,4 @@
 // Copyright (c) 2012-2017, The CryptoNote developers, The Bytecoin developers
-//
 // This file is part of Bytecoin.
 //
 // Bytecoin is free software: you can redistribute it and/or modify
@@ -20,6 +19,7 @@
 #include <limits>
 #include <string>
 #include <vector>
+#include <boost/optional.hpp>
 #include "CryptoNote.h"
 
 namespace CryptoNote {
@@ -90,6 +90,7 @@ struct WalletTransaction {
   uint64_t timestamp;
   uint32_t blockHeight;
   Crypto::Hash hash;
+  boost::optional<Crypto::SecretKey> secretKey;
   int64_t totalAmount;
   uint64_t fee;
   uint64_t creationTime;

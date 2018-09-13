@@ -39,12 +39,10 @@ class MockTableReader : public TableReader {
   explicit MockTableReader(const stl_wrappers::KVMap& table) : table_(table) {}
 
   InternalIterator* NewIterator(const ReadOptions&,
-                                const SliceTransform* prefix_extractor,
-                                Arena* arena = nullptr,
+                                Arena* arena,
                                 bool skip_filters = false) override;
 
-  Status Get(const ReadOptions& readOptions, const Slice& key,
-             GetContext* get_context, const SliceTransform* prefix_extractor,
+  Status Get(const ReadOptions&, const Slice& key, GetContext* get_context,
              bool skip_filters = false) override;
 
   uint64_t ApproximateOffsetOf(const Slice& /*key*/) override { return 0; }

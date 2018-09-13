@@ -198,21 +198,11 @@ struct ColumnFamilyOptions : public AdvancedColumnFamilyOptions {
   // Typical speeds of kSnappyCompression on an Intel(R) Core(TM)2 2.4GHz:
   //    ~200-500MB/s compression
   //    ~400-800MB/s decompression
-  //
   // Note that these speeds are significantly faster than most
   // persistent storage speeds, and therefore it is typically never
   // worth switching to kNoCompression.  Even if the input data is
   // incompressible, the kSnappyCompression implementation will
   // efficiently detect that and will switch to uncompressed mode.
-  //
-  // If you do not set `compression_opts.level`, or set it to
-  // `CompressionOptions::kDefaultCompressionLevel`, we will attempt to pick the
-  // default corresponding to `compression` as follows:
-  //
-  // - kZSTD: 3
-  // - kZlibCompression: Z_DEFAULT_COMPRESSION (currently -1)
-  // - kLZ4HCCompression: 0
-  // - For all others, we do not specify a compression level
   CompressionType compression;
 
   // Compression algorithm that will be used for the bottommost level that
@@ -281,7 +271,7 @@ struct ColumnFamilyOptions : public AdvancedColumnFamilyOptions {
   // later in the vector.
   // Note that, if a path is supplied to multiple column
   // families, it would have files and total size from all
-  // the column families combined. User should provision for the
+  // the column families combined. User should privision for the
   // total size(from all the column families) in such cases.
   //
   // If left empty, db_paths will be used.
@@ -568,9 +558,8 @@ struct DBOptions {
 
   // manifest file is rolled over on reaching this limit.
   // The older manifest file be deleted.
-  // The default value is 1GB so that the manifest file can grow, but not
-  // reach the limit of storage capacity.
-  uint64_t max_manifest_file_size = 1024 * 1024 * 1024;
+  // The default value is MAX_INT so that roll-over does not take place.
+  uint64_t max_manifest_file_size = std::numeric_limits<uint64_t>::max();
 
   // Number of shards used for table cache.
   int table_cache_numshardbits = 6;

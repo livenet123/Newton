@@ -38,12 +38,8 @@ Slice MetaIndexBuilder::Finish() {
   return meta_index_block_->Finish();
 }
 
-// Property block will be read sequentially and cached in a heap located
-// object, so there's no need for restart points. Thus we set the restart
-// interval to infinity to save space.
 PropertyBlockBuilder::PropertyBlockBuilder()
-    : properties_block_(
-          new BlockBuilder(port::kMaxInt32 /* restart interval */)) {}
+    : properties_block_(new BlockBuilder(1 /* restart interval */)) {}
 
 void PropertyBlockBuilder::Add(const std::string& name,
                                const std::string& val) {
@@ -75,7 +71,6 @@ void PropertyBlockBuilder::AddTableProperty(const TableProperties& props) {
     Add(TablePropertiesNames::kIndexPartitions, props.index_partitions);
     Add(TablePropertiesNames::kTopLevelIndexSize, props.top_level_index_size);
   }
-  Add(TablePropertiesNames::kIndexKeyIsUserKey, props.index_key_is_user_key);
   Add(TablePropertiesNames::kNumEntries, props.num_entries);
   Add(TablePropertiesNames::kNumDataBlocks, props.num_data_blocks);
   Add(TablePropertiesNames::kFilterSize, props.filter_size);
@@ -197,8 +192,7 @@ Status ReadProperties(const Slice& handle_value, RandomAccessFileReader* file,
   Block properties_block(std::move(block_contents),
                          kDisableGlobalSequenceNumber);
   BlockIter iter;
-  properties_block.NewIterator(BytewiseComparator(), BytewiseComparator(),
-                               &iter);
+  properties_block.NewIterator(BytewiseComparator(), &iter);
 
   auto new_table_properties = new TableProperties();
   // All pre-defined properties of type uint64_t
@@ -209,8 +203,6 @@ Status ReadProperties(const Slice& handle_value, RandomAccessFileReader* file,
        &new_table_properties->index_partitions},
       {TablePropertiesNames::kTopLevelIndexSize,
        &new_table_properties->top_level_index_size},
-      {TablePropertiesNames::kIndexKeyIsUserKey,
-       &new_table_properties->index_key_is_user_key},
       {TablePropertiesNames::kFilterSize, &new_table_properties->filter_size},
       {TablePropertiesNames::kRawKeySize, &new_table_properties->raw_key_size},
       {TablePropertiesNames::kRawValueSize,
@@ -320,7 +312,7 @@ Status ReadTableProperties(RandomAccessFileReader* file, uint64_t file_size,
   Block metaindex_block(std::move(metaindex_contents),
                         kDisableGlobalSequenceNumber);
   std::unique_ptr<InternalIterator> meta_iter(
-      metaindex_block.NewIterator(BytewiseComparator(), BytewiseComparator()));
+      metaindex_block.NewIterator(BytewiseComparator()));
 
   // -- Read property block
   bool found_properties_block = true;
@@ -383,8 +375,7 @@ Status FindMetaBlock(RandomAccessFileReader* file, uint64_t file_size,
                         kDisableGlobalSequenceNumber);
 
   std::unique_ptr<InternalIterator> meta_iter;
-  meta_iter.reset(
-      metaindex_block.NewIterator(BytewiseComparator(), BytewiseComparator()));
+  meta_iter.reset(metaindex_block.NewIterator(BytewiseComparator()));
 
   return FindMetaBlock(meta_iter.get(), meta_block_name, block_handle);
 }
@@ -425,8 +416,7 @@ Status ReadMetaBlock(RandomAccessFileReader* file,
                         kDisableGlobalSequenceNumber);
 
   std::unique_ptr<InternalIterator> meta_iter;
-  meta_iter.reset(
-      metaindex_block.NewIterator(BytewiseComparator(), BytewiseComparator()));
+  meta_iter.reset(metaindex_block.NewIterator(BytewiseComparator()));
 
   BlockHandle block_handle;
   status = FindMetaBlock(meta_iter.get(), meta_block_name, &block_handle);

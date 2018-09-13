@@ -595,6 +595,7 @@ void InProcessNode::getTransactionHashesByPaymentId(const Crypto::Hash& paymentI
   });
 }
 
+
 void InProcessNode::peerCountUpdated(size_t count) {
   observerManager.notify(&INodeObserver::peerCountUpdated, count);
 }

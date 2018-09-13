@@ -52,6 +52,7 @@ class FullFilterBlockBuilder : public FilterBlockBuilder {
  protected:
   virtual void AddKey(const Slice& key);
   std::unique_ptr<FilterBitsBuilder> filter_bits_builder_;
+  virtual void Reset();
 
  private:
   // important: all of these might point to invalid addresses
@@ -96,15 +97,13 @@ class FullFilterBlockReader : public FilterBlockReader {
   ~FullFilterBlockReader() {}
 
   virtual bool IsBlockBased() override { return false; }
-
   virtual bool KeyMayMatch(
-      const Slice& key, const SliceTransform* prefix_extractor,
-      uint64_t block_offset = kNotValid, const bool no_io = false,
+      const Slice& key, uint64_t block_offset = kNotValid,
+      const bool no_io = false,
       const Slice* const const_ikey_ptr = nullptr) override;
-
   virtual bool PrefixMayMatch(
-      const Slice& prefix, const SliceTransform* prefix_extractor,
-      uint64_t block_offset = kNotValid, const bool no_io = false,
+      const Slice& prefix, uint64_t block_offset = kNotValid,
+      const bool no_io = false,
       const Slice* const const_ikey_ptr = nullptr) override;
   virtual size_t ApproximateMemoryUsage() const override;
 

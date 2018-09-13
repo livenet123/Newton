@@ -1,4 +1,6 @@
 // Copyright (c) 2012-2017, The CryptoNote developers, The Bytecoin developers
+// Copyright (c) 2016-2018, The Karbowanec developers
+// Copyright (c) 2018, The Newton Developers.
 //
 // This file is part of Bytecoin.
 //
@@ -92,6 +94,7 @@ private:
   std::error_code handleGetViewKey(const GetViewKey::Request& request, GetViewKey::Response& response);
   std::error_code handleGetStatus(const GetStatus::Request& request, GetStatus::Response& response);
   std::error_code handleGetAddresses(const GetAddresses::Request& request, GetAddresses::Response& response);
+  std::error_code handleValidateAddress(const ValidateAddress::Request& request, ValidateAddress::Response& response);
 
   std::error_code handleGetUnspendOuts(const GetUnspendOuts::Request& request, GetUnspendOuts::Response& response);
   std::error_code handleSendFusionTransaction(const SendFusionTransaction::Request& request, SendFusionTransaction::Response& response);

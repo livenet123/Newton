@@ -71,6 +71,7 @@ public:
                                std::vector<BinaryArray>& transactions,
                                std::vector<Crypto::Hash>& missedHashes) const = 0;
 
+
   virtual Difficulty getBlockDifficulty(uint32_t blockIndex) const = 0;
   virtual Difficulty getDifficultyForNextBlock() const = 0;
 
@@ -83,6 +84,7 @@ public:
                                            std::vector<uint32_t>& globalIndexes) const = 0;
   virtual bool getRandomOutputs(uint64_t amount, uint16_t count, std::vector<uint32_t>& globalIndexes,
                                 std::vector<Crypto::PublicKey>& publicKeys) const = 0;
+
 
   virtual bool addTransactionToPool(const BinaryArray& transactionBinaryArray) = 0;
 
@@ -107,5 +109,7 @@ public:
   virtual std::vector<Crypto::Hash> getAlternativeBlockHashesByIndex(uint32_t blockIndex) const = 0;
   virtual std::vector<Crypto::Hash> getBlockHashesByTimestamps(uint64_t timestampBegin, size_t secondsCount) const = 0;
   virtual std::vector<Crypto::Hash> getTransactionHashesByPaymentId(const Crypto::Hash& paymentId) const = 0;
+  virtual bool getTransactionsByPaymentId(const Crypto::Hash& paymentId, std::vector<Transaction>& transactions) = 0;
+
 };
 }

@@ -33,16 +33,14 @@ class ForwardLevelIterator : public InternalIterator {
  public:
   ForwardLevelIterator(const ColumnFamilyData* const cfd,
                        const ReadOptions& read_options,
-                       const std::vector<FileMetaData*>& files,
-                       const SliceTransform* prefix_extractor)
+                       const std::vector<FileMetaData*>& files)
       : cfd_(cfd),
         read_options_(read_options),
         files_(files),
         valid_(false),
         file_index_(std::numeric_limits<uint32_t>::max()),
         file_iter_(nullptr),
-        pinned_iters_mgr_(nullptr),
-        prefix_extractor_(prefix_extractor) {}
+        pinned_iters_mgr_(nullptr) {}
 
   ~ForwardLevelIterator() {
     // Reset current pointer
@@ -77,7 +75,7 @@ class ForwardLevelIterator : public InternalIterator {
         read_options_, *(cfd_->soptions()), cfd_->internal_comparator(),
         files_[file_index_]->fd,
         read_options_.ignore_range_deletions ? nullptr : &range_del_agg,
-        prefix_extractor_, nullptr /* table_reader_ptr */, nullptr, false);
+        nullptr /* table_reader_ptr */, nullptr, false);
     file_iter_->SetPinnedItersMgr(pinned_iters_mgr_);
     valid_ = false;
     if (!range_del_agg.IsEmpty()) {
@@ -190,7 +188,6 @@ class ForwardLevelIterator : public InternalIterator {
   Status status_;
   InternalIterator* file_iter_;
   PinnedIteratorsManager* pinned_iters_mgr_;
-  const SliceTransform* prefix_extractor_;
 };
 
 ForwardIterator::ForwardIterator(DBImpl* db, const ReadOptions& read_options,
@@ -199,7 +196,7 @@ ForwardIterator::ForwardIterator(DBImpl* db, const ReadOptions& read_options,
     : db_(db),
       read_options_(read_options),
       cfd_(cfd),
-      prefix_extractor_(current_sv->mutable_cf_options.prefix_extractor.get()),
+      prefix_extractor_(cfd->ioptions()->prefix_extractor),
       user_comparator_(cfd->user_comparator()),
       immutable_min_heap_(MinIterComparator(&cfd_->internal_comparator())),
       sv_(current_sv),
@@ -636,8 +633,7 @@ void ForwardIterator::RebuildIterators(bool refresh_sv) {
     }
     l0_iters_.push_back(cfd_->table_cache()->NewIterator(
         read_options_, *cfd_->soptions(), cfd_->internal_comparator(), l0->fd,
-        read_options_.ignore_range_deletions ? nullptr : &range_del_agg,
-        sv_->mutable_cf_options.prefix_extractor.get()));
+        read_options_.ignore_range_deletions ? nullptr : &range_del_agg));
   }
   BuildLevelIterators(vstorage);
   current_ = nullptr;
@@ -707,8 +703,7 @@ void ForwardIterator::RenewIterators() {
     l0_iters_new.push_back(cfd_->table_cache()->NewIterator(
         read_options_, *cfd_->soptions(), cfd_->internal_comparator(),
         l0_files_new[inew]->fd,
-        read_options_.ignore_range_deletions ? nullptr : &range_del_agg,
-        svnew->mutable_cf_options.prefix_extractor.get()));
+        read_options_.ignore_range_deletions ? nullptr : &range_del_agg));
   }
 
   for (auto* f : l0_iters_) {
@@ -749,9 +744,8 @@ void ForwardIterator::BuildLevelIterators(const VersionStorageInfo* vstorage) {
         has_iter_trimmed_for_upper_bound_ = true;
       }
     } else {
-      level_iters_.push_back(new ForwardLevelIterator(
-          cfd_, read_options_, level_files,
-          sv_->mutable_cf_options.prefix_extractor.get()));
+      level_iters_.push_back(
+          new ForwardLevelIterator(cfd_, read_options_, level_files));
     }
   }
 }
@@ -766,8 +760,7 @@ void ForwardIterator::ResetIncompleteIterators() {
     DeleteIterator(l0_iters_[i]);
     l0_iters_[i] = cfd_->table_cache()->NewIterator(
         read_options_, *cfd_->soptions(), cfd_->internal_comparator(),
-        l0_files[i]->fd, nullptr /* range_del_agg */,
-        sv_->mutable_cf_options.prefix_extractor.get());
+        l0_files[i]->fd, nullptr /* range_del_agg */);
     l0_iters_[i]->SetPinnedItersMgr(pinned_iters_mgr_);
   }
 

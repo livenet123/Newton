@@ -172,15 +172,14 @@ else()
   if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -fno-omit-frame-pointer")
     include(CheckCXXCompilerFlag)
-	 if(ENABLE_LEAF_FRAME)
+	if(ENABLE_LEAF_FRAME)
     CHECK_CXX_COMPILER_FLAG("-momit-leaf-frame-pointer" HAVE_OMIT_LEAF_FRAME_POINTER)
     if(HAVE_OMIT_LEAF_FRAME_POINTER)
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -momit-leaf-frame-pointer")
     endif()
-	endif()
-  endif()
+   endif()
+ endif()
 endif()
-
 include(CheckCCompilerFlag)
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "ppc64le")
   CHECK_C_COMPILER_FLAG("-maltivec" HAS_ALTIVEC)
@@ -239,7 +238,7 @@ if(HAVE_SSE42)
   add_definitions(-DHAVE_PCLMUL)
 elseif(FORCE_SSE42)
   message(FATAL_ERROR "FORCE_SSE42=ON but unable to compile with SSE4.2 enabled")
-  endif()
+ endif()
 endif()
 if(ENABLE_THREAD_LOCAL)
 CHECK_CXX_SOURCE_COMPILES("
@@ -252,7 +251,7 @@ int main() {
 " HAVE_THREAD_LOCAL)
 if(HAVE_THREAD_LOCAL)
   add_definitions(-DROCKSDB_SUPPORT_THREAD_LOCAL)
-  endif()
+ endif()
 endif()
 
 option(FAIL_ON_WARNINGS "Treat compile warnings as errors" OFF)
@@ -332,24 +331,14 @@ if(DEFINED USE_RTTI)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DROCKSDB_USE_RTTI")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -DROCKSDB_USE_RTTI")
   else()
-    if(MSVC)
-      message(STATUS "Disabling RTTI in Release builds. Always on in Debug.")
-      set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DROCKSDB_USE_RTTI")
-      set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /GR-")
-    else()
-      message(STATUS "Disabling RTTI in Release builds")
-      set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-rtti")
-      set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-rtti")
-    endif()
+    message(STATUS "Disabling RTTI")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-rtti")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-rtti")
   endif()
 else()
   message(STATUS "Enabling RTTI in Debug builds only (default)")
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DROCKSDB_USE_RTTI")
-  if(MSVC)
-     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /GR-")
-  else()
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-rtti")
-  endif()
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-rtti")
 endif()
 
 if(MSVC)
@@ -409,7 +398,12 @@ if(NOT WIN32)
   add_definitions(-DROCKSDB_PLATFORM_POSIX -DROCKSDB_LIB_IO_POSIX)
 endif()
 
+if(ENABLE_FALLOCATE)
+option(WITH_FALLOCATE "build with fallocate" ON)
+else()
 option(WITH_FALLOCATE "build with fallocate" OFF)
+endif()
+
 if(WITH_FALLOCATE)
   CHECK_CXX_SOURCE_COMPILES("
 #include <fcntl.h>
@@ -434,7 +428,7 @@ int main() {
 " HAVE_SYNC_FILE_RANGE_WRITE)
 if(HAVE_SYNC_FILE_RANGE_WRITE)
   add_definitions(-DROCKSDB_RANGESYNC_PRESENT)
-  endif()
+ endif()
 endif()
 
 if(ENABLE_PTHREAD_MUTEX_ADAPTIVE_NP)
@@ -446,7 +440,7 @@ int main() {
 " HAVE_PTHREAD_MUTEX_ADAPTIVE_NP)
 if(HAVE_PTHREAD_MUTEX_ADAPTIVE_NP)
   add_definitions(-DROCKSDB_PTHREAD_ADAPTIVE_MUTEX)
-endif()
+ endif()
 endif()
 
 if(ENABLE_MALLOC_USABLE_SIZE)
@@ -602,7 +596,6 @@ set(SOURCES
         util/coding.cc
         util/compaction_job_stats_impl.cc
         util/comparator.cc
-        util/compression_context_cache.cc
         util/concurrent_arena.cc
         util/crc32c.cc
         util/delete_scheduler.cc
@@ -686,8 +679,6 @@ set(SOURCES
         utilities/transactions/transaction_util.cc
         utilities/transactions/write_prepared_txn.cc
         utilities/transactions/write_prepared_txn_db.cc
-        utilities/transactions/write_unprepared_txn.cc
-        utilities/transactions/write_unprepared_txn_db.cc
         utilities/ttl/db_ttl_impl.cc
         utilities/write_batch_with_index/write_batch_with_index.cc
         utilities/write_batch_with_index/write_batch_with_index_internal.cc
@@ -988,7 +979,6 @@ if(WITH_TESTS)
         utilities/transactions/optimistic_transaction_test.cc
         utilities/transactions/transaction_test.cc
         utilities/transactions/write_prepared_transaction_test.cc
-        utilities/transactions/write_unprepared_transaction_test.cc
         utilities/ttl/ttl_test.cc
         utilities/write_batch_with_index/write_batch_with_index_test.cc
   )
@@ -1076,4 +1066,63 @@ endif()
 option(WITH_TOOLS "build with tools" ON)
 if(WITH_TOOLS)
   add_subdirectory(tools)
+endif()
+
+if(MSVC)
+  # Check for the presence of AVX and figure out the flags to use for it.
+  string (REPLACE "/arch:AVX2" ""     CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+  string (REPLACE "/arch:AVX" ""     CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+
+  if(ENABLE_AVX)
+    include(CheckCXXSourceRuns)
+    
+    # Check AVX
+    check_cxx_source_runs("
+      #include <immintrin.h>
+      int main()
+      {
+        __m256 a, b, c;
+        const float src[8] = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f };
+        float dst[8];
+        a = _mm256_loadu_ps( src );
+        b = _mm256_loadu_ps( src );
+        c = _mm256_add_ps( a, b );
+        _mm256_storeu_ps( dst, c );
+        for( int i = 0; i < 8; i++ ){
+          if( ( src[i] + src[i] ) != dst[i] ){
+            return -1;
+          }
+        }
+        return 0;
+      }"
+      HAVE_AVX_EXTENSIONS)
+
+    # Check AVX2
+    check_cxx_source_runs("
+      #include <immintrin.h>
+      int main()
+      {
+        __m256i a, b, c;
+        const int src[8] = { 1, 2, 3, 4, 5, 6, 7, 8 };
+        int dst[8];
+        a =  _mm256_loadu_si256( (__m256i*)src );
+        b =  _mm256_loadu_si256( (__m256i*)src );
+        c = _mm256_add_epi32( a, b );
+        _mm256_storeu_si256( (__m256i*)dst, c );
+        for( int i = 0; i < 8; i++ ){
+          if( ( src[i] + src[i] ) != dst[i] ){
+            return -1;
+          }
+        }
+        return 0;
+      }"
+      HAVE_AVX2_EXTENSIONS)
+
+    # Set Flags
+    if(HAVE_AVX2_EXTENSIONS AND NOT MSVC_VERSION LESS 1800)
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:AVX2")
+    elseif(HAVE_AVX_EXTENSIONS  AND NOT MSVC_VERSION LESS 1600)
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:AVX")
+    endif()
+  endif()
 endif()

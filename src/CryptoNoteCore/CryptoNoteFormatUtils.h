@@ -72,6 +72,7 @@ bool checkOutsValid(const TransactionPrefix& tx, std::string* error = nullptr);
 bool checkMoneyOverflow(const TransactionPrefix &tx);
 bool checkInputsOverflow(const TransactionPrefix &tx);
 bool checkOutsOverflow(const TransactionPrefix& tx);
+
 uint64_t get_outs_money_amount(const Transaction& tx);
 std::string short_hash_str(const Crypto::Hash& h);
 
@@ -111,5 +112,7 @@ void decompose_amount_into_digits(uint64_t amount, uint64_t dust_threshold, cons
     dust_handler(dust);
   }
 }
+
+bool is_valid_decomposed_amount(uint64_t amount);
 
 }

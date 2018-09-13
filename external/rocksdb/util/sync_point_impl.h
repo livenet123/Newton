@@ -6,7 +6,6 @@
 #include "util/sync_point.h"
 
 #include <assert.h>
-#include <atomic>
 #include <condition_variable>
 #include <functional>
 #include <mutex>
@@ -23,7 +22,6 @@
 #ifndef NDEBUG
 namespace rocksdb {
 struct SyncPoint::Data {
-  Data() : enabled_(false) {}
   // Enable proper deletion by subclasses
   virtual ~Data() {}
   // successor/predecessor map loaded from LoadDependency
@@ -37,7 +35,7 @@ struct SyncPoint::Data {
   std::condition_variable cv_;
   // sync points that have been passed through
   std::unordered_set<std::string> cleared_points_;
-  std::atomic<bool> enabled_;
+  bool enabled_ = false;
   int num_callbacks_running_ = 0;
 
   void LoadDependency(const std::vector<SyncPointPair>& dependencies);
@@ -53,9 +51,11 @@ struct SyncPoint::Data {
   void ClearCallBack(const std::string& point);
   void ClearAllCallBacks();
   void EnableProcessing() {
+    std::lock_guard<std::mutex> lock(mutex_);
     enabled_ = true;
   }
   void DisableProcessing() {
+    std::lock_guard<std::mutex> lock(mutex_);
     enabled_ = false;
   }
   void ClearTrace() {

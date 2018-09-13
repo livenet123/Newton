@@ -145,7 +145,7 @@ bool test_block_creation()
   CryptoNote::Currency currency = CryptoNote::CurrencyBuilder(logger).currency();
 
   AccountPublicAddress adr;
-  bool r = currency.parseAccountAddressString("272xWzbWsP4cfNFfxY5ETN5moU8x81PKfWPwynrrqsNGDBQGLmD1kCkKCvPeDUXu5XfmZkCrQ53wsWmdfvHBGLNjGcRiDcK", adr);
+  bool r = currency.parseAccountAddressString("cczK5aRbEkiZv3d4siPM2BaQoxCbjYKB5dyGcMDedDewAEYUe6zma2KThC5JqwX1evTG6DSmHed4PDmiJ4AjaGs61JXMHwq6CR", adr);
   CHECK_AND_ASSERT_MES(r, false, "failed to import");
   BlockTemplate b;
   r = currency.constructMinerTx(BLOCK_MAJOR_VERSION_1, 90, Common::medianValue(szs), 3553616528562147, 33094, 10000000, adr, b.baseTransaction, BinaryArray(), 11);

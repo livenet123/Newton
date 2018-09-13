@@ -1,4 +1,6 @@
 // Copyright (c) 2012-2017, The CryptoNote developers, The Bytecoin developers
+// Copyright (c) 2016-2018, The Karbowanec developers
+// Copyright (c) 2018, The Newton Developers
 //
 // This file is part of Bytecoin.
 //
@@ -45,8 +47,8 @@ JsonRpcServer::JsonRpcServer(System::Dispatcher& sys, System::Event& stopEvent, 
 {
 }
 
-void JsonRpcServer::start(const std::string& bindAddress, uint16_t bindPort) {
-  HttpServer::start(bindAddress, bindPort);
+void JsonRpcServer::start(const std::string& bindAddress, uint16_t bindPort, const std::string& m_rpcUser, const std::string& m_rpcPassword) {
+  HttpServer::start(bindAddress, bindPort, m_rpcUser, m_rpcPassword);
   stopEvent.wait();
   HttpServer::stop();
 }

@@ -90,29 +90,25 @@ class BlockBasedTable : public TableReader {
                      const InternalKeyComparator& internal_key_comparator,
                      unique_ptr<RandomAccessFileReader>&& file,
                      uint64_t file_size, unique_ptr<TableReader>* table_reader,
-                     const SliceTransform* prefix_extractor = nullptr,
                      bool prefetch_index_and_filter_in_cache = true,
                      bool skip_filters = false, int level = -1);
 
-  bool PrefixMayMatch(const Slice& internal_key,
-                      const SliceTransform* prefix_extractor = nullptr);
+  bool PrefixMayMatch(const Slice& internal_key);
 
   // Returns a new iterator over the table contents.
   // The result of NewIterator() is initially invalid (caller must
   // call one of the Seek methods on the iterator before using it).
   // @param skip_filters Disables loading/accessing the filter block
-  InternalIterator* NewIterator(const ReadOptions&,
-                                const SliceTransform* prefix_extractor,
-                                Arena* arena = nullptr,
-                                bool skip_filters = false) override;
+  InternalIterator* NewIterator(
+      const ReadOptions&, Arena* arena = nullptr,
+      bool skip_filters = false) override;
 
   InternalIterator* NewRangeTombstoneIterator(
       const ReadOptions& read_options) override;
 
   // @param skip_filters Disables loading/accessing the filter block
   Status Get(const ReadOptions& readOptions, const Slice& key,
-             GetContext* get_context, const SliceTransform* prefix_extractor,
-             bool skip_filters = false) override;
+             GetContext* get_context, bool skip_filters = false) override;
 
   // Pre-fetch the disk blocks that correspond to the key range specified by
   // (kbegin, kend). The call will return error status in the event of
@@ -140,8 +136,7 @@ class BlockBasedTable : public TableReader {
   size_t ApproximateMemoryUsage() const override;
 
   // convert SST file to a human readable form
-  Status DumpTable(WritableFile* out_file,
-                   const SliceTransform* prefix_extractor = nullptr) override;
+  Status DumpTable(WritableFile* out_file) override;
 
   Status VerifyChecksum() override;
 
@@ -217,13 +212,11 @@ class BlockBasedTable : public TableReader {
                                          const Slice& index_value,
                                          BlockIter* input_iter = nullptr,
                                          bool is_index = false,
-                                         bool key_includes_seq = true,
                                          GetContext* get_context = nullptr);
   static BlockIter* NewDataBlockIterator(Rep* rep, const ReadOptions& ro,
                                          const BlockHandle& block_hanlde,
                                          BlockIter* input_iter = nullptr,
                                          bool is_index = false,
-                                         bool key_includes_seq = true,
                                          GetContext* get_context = nullptr,
                                          Status s = Status());
 
@@ -260,13 +253,12 @@ class BlockBasedTable : public TableReader {
   // if `no_io == true`, we will not try to read filter/index from sst file
   // were they not present in cache yet.
   CachableEntry<FilterBlockReader> GetFilter(
-      const SliceTransform* prefix_extractor = nullptr,
       FilePrefetchBuffer* prefetch_buffer = nullptr, bool no_io = false,
       GetContext* get_context = nullptr) const;
   virtual CachableEntry<FilterBlockReader> GetFilter(
       FilePrefetchBuffer* prefetch_buffer, const BlockHandle& filter_blk_handle,
-      const bool is_a_filter_partition, bool no_io, GetContext* get_context,
-      const SliceTransform* prefix_extractor = nullptr) const;
+      const bool is_a_filter_partition, bool no_io,
+      GetContext* get_context) const;
 
   // Get the iterator from the index reader.
   // If input_iter is not set, return new Iterator
@@ -279,8 +271,7 @@ class BlockBasedTable : public TableReader {
   //  3. We disallowed any io to be performed, that is, read_options ==
   //     kBlockCacheTier
   InternalIterator* NewIndexIterator(
-      const ReadOptions& read_options, bool prefix_extractor_changed = false,
-      BlockIter* input_iter = nullptr,
+      const ReadOptions& read_options, BlockIter* input_iter = nullptr,
       CachableEntry<IndexReader>* index_entry = nullptr,
       GetContext* get_context = nullptr);
 
@@ -334,10 +325,9 @@ class BlockBasedTable : public TableReader {
       InternalIterator* preloaded_meta_index_iter = nullptr,
       const int level = -1);
 
-  bool FullFilterKeyMayMatch(
-      const ReadOptions& read_options, FilterBlockReader* filter,
-      const Slice& user_key, const bool no_io,
-      const SliceTransform* prefix_extractor = nullptr) const;
+  bool FullFilterKeyMayMatch(const ReadOptions& read_options,
+                             FilterBlockReader* filter, const Slice& user_key,
+                             const bool no_io) const;
 
   // Read the meta block from sst.
   static Status ReadMetaBlock(Rep* rep, FilePrefetchBuffer* prefetch_buffer,
@@ -347,10 +337,9 @@ class BlockBasedTable : public TableReader {
   Status VerifyChecksumInBlocks(InternalIterator* index_iter);
 
   // Create the filter from the filter block.
-  FilterBlockReader* ReadFilter(
-      FilePrefetchBuffer* prefetch_buffer, const BlockHandle& filter_handle,
-      const bool is_a_filter_partition,
-      const SliceTransform* prefix_extractor = nullptr) const;
+  FilterBlockReader* ReadFilter(FilePrefetchBuffer* prefetch_buffer,
+                                const BlockHandle& filter_handle,
+                                const bool is_a_filter_partition) const;
 
   static void SetupCacheKeyPrefix(Rep* rep, uint64_t file_size);
 
@@ -380,15 +369,13 @@ class BlockBasedTable::PartitionedIndexIteratorState
  public:
   PartitionedIndexIteratorState(
       BlockBasedTable* table,
-      std::unordered_map<uint64_t, CachableEntry<Block>>* block_map,
-      const bool index_key_includes_seq);
+      std::unordered_map<uint64_t, CachableEntry<Block>>* block_map = nullptr);
   InternalIterator* NewSecondaryIterator(const Slice& index_value) override;
 
  private:
   // Don't own table_
   BlockBasedTable* table_;
   std::unordered_map<uint64_t, CachableEntry<Block>>* block_map_;
-  bool index_key_includes_seq_;
 };
 
 // CachableEntry represents the entries that *may* be fetched from block cache.
@@ -512,19 +499,14 @@ class BlockBasedTableIterator : public InternalIterator {
   BlockBasedTableIterator(BlockBasedTable* table,
                           const ReadOptions& read_options,
                           const InternalKeyComparator& icomp,
-                          InternalIterator* index_iter, bool check_filter,
-                          const SliceTransform* prefix_extractor, bool is_index,
-                          bool key_includes_seq = true)
+                          InternalIterator* index_iter, bool check_filter)
       : table_(table),
         read_options_(read_options),
         icomp_(icomp),
         index_iter_(index_iter),
         pinned_iters_mgr_(nullptr),
         block_iter_points_to_real_block_(false),
-        check_filter_(check_filter),
-        is_index_(is_index),
-        key_includes_seq_(key_includes_seq),
-        prefix_extractor_(prefix_extractor) {}
+        check_filter_(check_filter) {}
 
   ~BlockBasedTableIterator() { delete index_iter_; }
 
@@ -570,9 +552,8 @@ class BlockBasedTableIterator : public InternalIterator {
            block_iter_points_to_real_block_;
   }
 
-  bool CheckPrefixMayMatch(const Slice& ikey,
-                           const SliceTransform* prefix_extractor = nullptr) {
-    if (check_filter_ && !table_->PrefixMayMatch(ikey, prefix_extractor)) {
+  bool CheckPrefixMayMatch(const Slice& ikey) {
+    if (check_filter_ && !table_->PrefixMayMatch(ikey)) {
       // TODO remember the iterator is invalidated because of prefix
       // match. This can avoid the upper level file iterator to falsely
       // believe the position is the end of the SST file and move to
@@ -616,13 +597,8 @@ class BlockBasedTableIterator : public InternalIterator {
   bool block_iter_points_to_real_block_;
   bool is_out_of_bound_ = false;
   bool check_filter_;
-  // If the blocks over which we iterate are index blocks
-  bool is_index_;
-  // If the keys in the blocks over which we iterate include 8 byte sequence
-  bool key_includes_seq_;
   // TODO use block offset instead
   std::string prev_index_value_;
-  const SliceTransform* prefix_extractor_;
 
   static const size_t kInitReadaheadSize = 8 * 1024;
   // Found that 256 KB readahead size provides the best performance, based on

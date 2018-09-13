@@ -51,6 +51,7 @@ public:
 
   virtual uint64_t getTransactionReceiveTime(const Crypto::Hash& hash) const override;
   virtual std::vector<Crypto::Hash> getTransactionHashesByPaymentId(const Crypto::Hash& paymentId) const override;
+
 private:
   TransactionValidatorState poolState;
 
