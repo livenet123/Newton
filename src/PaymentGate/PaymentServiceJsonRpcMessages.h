@@ -231,7 +231,6 @@ struct TransactionRpcInfo {
   std::string transactionHash;
   uint32_t blockIndex;
   uint64_t timestamp;
-  uint32_t confirmations;
   bool isBase;
   uint64_t unlockTime;
   int64_t amount;

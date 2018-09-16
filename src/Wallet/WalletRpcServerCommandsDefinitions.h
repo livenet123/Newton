@@ -142,7 +142,6 @@ using CryptoNote::ISerializer;
     std::string address;
     uint64_t blockIndex;
     uint64_t unlockTime;
-	uint64_t confirmations;
 
     void serialize(ISerializer& s) {
       KV_MEMBER(time)
@@ -154,7 +153,6 @@ using CryptoNote::ISerializer;
       KV_MEMBER(address)
       KV_MEMBER(blockIndex)
       KV_MEMBER(unlockTime)
-	  KV_MEMBER(confirmations)
     }
   };
 
