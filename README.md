@@ -5,7 +5,7 @@
 
 ## Building Newton
 
-### On *nix:
+### On Linux:
 
 Dependencies: GCC 4.9 or later, CMake 2.8.6 or later, and Boost 1.55.
 You may download them from:
