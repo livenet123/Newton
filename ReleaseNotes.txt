@@ -20,7 +20,6 @@ Release notes 3.0.0
 - add more info to getinfo json rpc response
 - add fee address option to the remote Daemon this will be used for 
    remote daemon fee. we set the fee 0.25% from tx amount and it will not exceed 1000 NCP
-- add confirmatins count to wallet rpc transfer
 - add missing rpc user and rpc password options to walletd authintication
 - add validateAddress method to rpc walletd API
 - add json rpc method to sign/verify message
