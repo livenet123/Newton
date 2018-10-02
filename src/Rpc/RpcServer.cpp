@@ -1062,22 +1062,10 @@ bool RpcServer::on_getblocktemplate(const COMMAND_RPC_GETBLOCKTEMPLATE::request&
   }
 
   AccountPublicAddress acc = boost::value_initialized<AccountPublicAddress>();
-  uint64_t height = m_core.getTopBlockIndex() + 1;
-  // science donation
-  if (height % 13 == 0)
-  {
-	  std::string donate = "cczJrVPTSj6aWNJyMpCdckjQ9oKB9f8cgVRrTt2mpAhY2QG7NZeqkVveCoM5WNiv5R7uJCKTTcEyvNxijaf3bUT7A6PZ5dS1H5";		  
-		   if (!donate.size() || !m_core.getCurrency().parseAccountAddressString(donate, acc)) {
-			   throw JsonRpc::JsonRpcError{ CORE_RPC_ERROR_CODE_WRONG_WALLET_ADDRESS, "Failed to parse wallet address" };
-		   }
-  }
 
-  else if (height % 13 != 0)
-  {
 	  if (!req.wallet_address.size() || !m_core.getCurrency().parseAccountAddressString(req.wallet_address, acc)) {
 		  throw JsonRpc::JsonRpcError{ CORE_RPC_ERROR_CODE_WRONG_WALLET_ADDRESS, "Failed to parse wallet address" };
 	  }
-  }
 
   BlockTemplate blockTemplate = boost::value_initialized<BlockTemplate>();
   CryptoNote::BinaryArray blob_reserve;
