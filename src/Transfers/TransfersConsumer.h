@@ -1,4 +1,8 @@
 // Copyright (c) 2012-2017, The CryptoNote developers, The Bytecoin developers
+// Copyright (c) 2018, The BBSCoin Developers
+// Copyright (c) 2018, The Karbo Developers
+// Copyright (c) 2018, The TurtleCoin Developers
+// Copyright (c) 2018, The Newton Developers
 //
 // This file is part of Bytecoin.
 //
@@ -45,6 +49,9 @@ public:
   void getSubscriptions(std::vector<AccountPublicAddress>& subscriptions);
 
   void initTransactionPool(const std::unordered_set<Crypto::Hash>& uncommitedTransactions);
+
+  void addPublicKeysSeen(const Crypto::Hash& transactionHash, const Crypto::PublicKey& outputKey);
+
   
   // IBlockchainConsumer
   virtual SynchronizationStart getSyncStart() override;

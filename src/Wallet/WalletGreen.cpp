@@ -1,4 +1,8 @@
 // Copyright (c) 2012-2017, The CryptoNote developers, The Bytecoin developers
+// Copyright (c) 2018, The BBSCoin Developers
+// Copyright (c) 2018, The Karbo Developers
+// Copyright (c) 2018, The TurtleCoin Developers
+// Copyright (c) 2018, The Newton Developers
 //
 // This file is part of Bytecoin.
 //
@@ -474,6 +478,29 @@ void WalletGreen::load(const std::string& path, const std::string& password, std
         subscribeWallets();
       }
     }
+  }
+
+  // Read all output keys cache
+  try {
+	  std::vector<AccountPublicAddress> subscriptionList;
+	  m_synchronizer.getSubscriptions(subscriptionList);
+	  for (auto& addr : subscriptionList) {
+		  auto sub = m_synchronizer.getSubscription(addr);
+		  if (sub != nullptr) {
+			  std::vector<TransactionOutputInformation> allTransfers;
+			  ITransfersContainer* container = &sub->getContainer();
+			  container->getOutputs(allTransfers, ITransfersContainer::IncludeAll);
+			  m_logger(INFO, BRIGHT_WHITE) << "Known Transfers " << allTransfers.size();
+			  for (auto& o : allTransfers) {
+				  if (o.type == TransactionTypes::OutputType::Key) {
+					  m_synchronizer.addPublicKeysSeen(addr, o.transactionHash, o.outputKey);
+				  }
+			  }
+		  }
+	  }
+  }
+  catch (const std::exception& e) {
+	  m_logger(ERROR, BRIGHT_RED) << "Failed to read output keys!! Continue without output keys: " << e.what();
   }
 
   m_blockchainSynchronizer.addObserver(this);
