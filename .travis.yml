@@ -5,8 +5,6 @@ env:
 - CXXFLAGS="-std=gnu++11"
 matrix:
   include:
-
-  # Ubuntu, g++-4.9
   - os: linux
     addons:
       apt:
@@ -16,30 +14,17 @@ matrix:
         - g++-4.9
         - libboost1.55-all-dev
     env:
-      - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9
-
-  # OSX, gcc
+    - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9
   - os: osx
-      osx_image: xcode10
-      compiler: gcc
-      env:
-      - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9
-
-  # OSX, clang
-  - os: osx
-     osx_image: xcode10
-     compiler: clang
-     env:
-     - MATRIX_EVAL="CC=clang && CXX=clang++"
-
 before_install:
-- eval $MATRIX_EVAL
-
+- if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo add-apt-repository ppa:ethcore/ethcore
+  -y    ; fi
+- if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get update -q                            ;
+  fi
 install:
-- if [ $TRAVIS_OS_NAME = osx ]; then brew install gcc@4.9 ; fi
-
+- if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install librocksdb-dev
+  -y            ; fi
 script:
-- eval $MATRIX_EVAL
 - mkdir build && cd build
 - cmake -DCMAKE_BUILD_TYPE=Release .. && make
 before_deploy:
