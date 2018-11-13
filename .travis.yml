@@ -36,9 +36,10 @@ before_install:
 - eval $MATRIX_EVAL
 
 install:
-- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install gcc@4.9 ; fi
+- if [ $TRAVIS_OS_NAME = osx ]; then brew install gcc@4.9 ; fi
 
 script:
+- eval $MATRIX_EVAL
 - mkdir build && cd build
 - cmake -DCMAKE_BUILD_TYPE=Release .. && make
 before_deploy:
