@@ -14,12 +14,12 @@ BEGIN
         BLOCK "040904b0"
         BEGIN
             VALUE "CompanyName", "Newton Coin Project"
-            VALUE "FileDescription", "Newton Daemon"
+            VALUE "FileDescription", "Newton RPC Wallet"
             VALUE "FileVersion", "3.0.0.0"
-            VALUE "InternalName", "Newtond.exe"
+            VALUE "InternalName", "walletd.exe"
             VALUE "LegalCopyright", "Copyright (C) 2018-2019, Newton Developers"
-            VALUE "OriginalFilename", "Newtond.exe"
-            VALUE "ProductName", "Newton Daemon"
+            VALUE "OriginalFilename", "walletd.exe"
+            VALUE "ProductName", "Newton RPC Wallet"
             VALUE "ProductVersion", "3.0.0.0"
         END
     END

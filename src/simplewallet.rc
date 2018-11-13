@@ -14,12 +14,12 @@ BEGIN
         BLOCK "040904b0"
         BEGIN
             VALUE "CompanyName", "Newton Coin Project"
-            VALUE "FileDescription", "Newton Daemon"
+            VALUE "FileDescription", "Newton simplewallet"
             VALUE "FileVersion", "3.0.0.0"
-            VALUE "InternalName", "Newtond.exe"
+            VALUE "InternalName", "simplewallet.exe"
             VALUE "LegalCopyright", "Copyright (C) 2018-2019, Newton Developers"
-            VALUE "OriginalFilename", "Newtond.exe"
-            VALUE "ProductName", "Newton Daemon"
+            VALUE "OriginalFilename", "simplewallet.exe"
+            VALUE "ProductName", "Newton simplewallet"
             VALUE "ProductVersion", "3.0.0.0"
         END
     END
