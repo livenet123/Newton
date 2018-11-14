@@ -1,9 +1,11 @@
 os: Visual Studio 2017
-
+platform:
+- x64
+- x86
 environment:
     BOOST_ROOT: C:\Libraries\boost_1_66_0
-    BOOST_LIBRARYDIR: C:\Libraries\boost_1_66_0\lib64-msvc-14.1
-
+    BOOST_LIBRARYDIR64: C:\Libraries\boost_1_66_0\lib64-msvc-14.1
+    BOOST_LIBRARYDIR32: C:\Libraries\boost_1_66_0\lib32-msvc-14.1   
 build_script:
     - md build
     - cd build
