@@ -42,6 +42,7 @@ install:
 - if [[ "$LABEL" == "osx-g++-4.9" ]]; then brew install gcc@4.9 ; fi
 
 script:
+  - eval $MATRIX_EVAL
   - mkdir build && cd build
   - cmake -DCMAKE_BUILD_TYPE=Release .. && make
 
