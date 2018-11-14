@@ -50,7 +50,7 @@ matrix:
 before_install:
    - eval $MATRIX_EVAL
 
-install
+install:
    - if [[ "$LABEL" == "osx-g++-4.9" ]]; then brew install gcc@4.9 ; fi
 
 script:
