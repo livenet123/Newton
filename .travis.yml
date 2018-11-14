@@ -8,36 +8,37 @@ env:
 matrix:
   include:
   
-  - os: linux
-    addons:
-      apt:
-        sources:
+- os: linux
+  addons:
+    apt:
+      sources:
         - ubuntu-toolchain-r-test
-        packages:
+      packages:
         - g++-4.9
         - gcc-4.9
         - libboost1.55-all-dev
-    env:
+  env:
     - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9
     - LABEL="linux-g++-4.9"
     
-  - os: osx
-    osx_image: xcode10
-    compiler: gcc
-    addons:
+# OSX, gcc  
+- os: osx
+  osx_image: xcode10
+  compiler: gcc
+  addons:
      homebrew:
       packages:
        - boost
     update: true
-    env:
+  env:
     - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9
     - LABEL="osx-g++-4.9" 
     
-  # OSX, clang
-  - os: osx
-    osx_image: xcode10
-    compiler: clang
-    addons:
+# OSX, clang
+- os: osx
+  osx_image: xcode10
+  compiler: clang
+  addons:
      homebrew:
       packages:
        - boost
@@ -46,22 +47,22 @@ matrix:
     - MATRIX_EVAL="CC=clang && CXX=clang++"
     - LABEL="osx-clang"
  
-  before_install:
-- eval $MATRIX_EVAL
+before_install:
+   - eval $MATRIX_EVAL
 
-- install
-- if [[ "$LABEL" == "osx-g++-4.9" ]]; then brew install gcc@4.9 ; fi
+install
+   - if [[ "$LABEL" == "osx-g++-4.9" ]]; then brew install gcc@4.9 ; fi
 
 script:
-- mkdir build && cd build
-- cmake -DCMAKE_BUILD_TYPE=Release .. && make
+  - mkdir build && cd build
+  - cmake -DCMAKE_BUILD_TYPE=Release .. && make
 
 before_deploy:
-- cd src
-- mkdir Newton-${TRAVIS_TAG}
-- mv Newtond miner simplewallet walletd connectivity_tool Newton-${TRAVIS_TAG}/
-- tar cvfz Newton-${TRAVIS_TAG}-${TRAVIS_OS_NAME}.tar.gz Newton-${TRAVIS_TAG}/
-- git tag "$(date +'%Y%m%d%H%M%S')-$(git log --format=%h -1)"
+  - cd src
+  - mkdir Newton-${TRAVIS_TAG}
+  - mv Newtond miner simplewallet walletd connectivity_tool Newton-${TRAVIS_TAG}/
+  - tar cvfz Newton-${TRAVIS_TAG}-${TRAVIS_OS_NAME}.tar.gz Newton-${TRAVIS_TAG}/
+  - git tag "$(date +'%Y%m%d%H%M%S')-$(git log --format=%h -1)"
 
 deploy:
   provider: releases
