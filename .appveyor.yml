@@ -23,5 +23,5 @@ before_build:
      
 build_script:
    - md build && cd build
-   - MSBuild NewtonWallet.sln /p:Configuration=Release /m
+   - MSBuild Newton.sln /p:Configuration=Release /m
 
