@@ -12,34 +12,36 @@ matrix:
       sources:
         - ubuntu-toolchain-r-test
       packages:
-        - g++-4.9
-        - gcc-4.9
         - libboost1.55-all-dev
-  env:
-    - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9"
+        - g++-7
+        - gcc-7
+    env:
+    - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
+    - LABEL="linux-g++-7"
     - DEPLOY="true"
       
-# OSX, gcc  
+# OSX, g++-7  
 - os: osx
   osx_image: xcode10
   compiler: gcc
   env:
-    - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9"
-    - LABEL="osx-g++-4.9"
+    - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
+    - LABEL="osx-g++-7"
    
 # OSX, clang
 - os: osx
   osx_image: xcode10
   compiler: clang
-    env:
-    - MATRIX_EVAL="CC=clang && CXX=clang++"
-    - DEPLOY="true"
+  env:
+   - MATRIX_EVAL="CC=clang && CXX=clang++"
+   - LABEL="osx-clang"
 
 before_install:
    - eval $MATRIX_EVAL
    
 install:
-- if [[ "$LABEL" == "osx-g++-4.9" ]]; then brew install gcc@4.9 ; fi
+- if [ $TRAVIS_OS_NAME = osx ]; then brew cask uninstall --force oclint || true ; fi
+- if [[ "$LABEL" == "osx-g++-7" ]]; then brew install gcc@7 ; fi
 
 script:
   - eval $MATRIX_EVAL
