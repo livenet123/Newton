@@ -1,7 +1,6 @@
 version: 1.0.{build}
 
 image: Visual Studio 2017
-configuration: Release
 
 environment:
  matrix:
@@ -23,7 +22,6 @@ before_build:
      - if "%BUILDER%"=="CMake" cmake.exe -G "%GENERATOR%" -DCMAKE_BUILD_TYPE=%CONFIGURATION% %APPVEYOR_BUILD_FOLDER%
      
 build_script:
-   - ps: 'Write-Host "Running $env:BUILDER:" -ForegroundColor Magenta'
    - md build && cd build
-   - if "%BUILDER%"=="CMake" cmake --build . --config %CONFIGURATION%
+   - MSBuild NewtonWallet.sln /p:Configuration=Release /m
 
