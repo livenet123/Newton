@@ -24,6 +24,6 @@ before_build:
      
 build_script:
    - ps: 'Write-Host "Running $env:BUILDER:" -ForegroundColor Magenta'
-   - md build && build
+   - md build && cd build
    - if "%BUILDER%"=="CMake" cmake --build . --config %CONFIGURATION%
 
