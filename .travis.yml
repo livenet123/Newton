@@ -16,7 +16,7 @@ matrix:
         - gcc-4.9
         - libboost1.55-all-dev
   env:
-    - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9
+    - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9"
     - DEPLOY="true"
       
 # OSX, gcc  
@@ -24,7 +24,7 @@ matrix:
   osx_image: xcode10
   compiler: gcc
   env:
-    - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9
+    - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9"
     - LABEL="osx-g++-4.9"
    
 # OSX, clang
