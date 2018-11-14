@@ -3,46 +3,54 @@ language: cpp
 
 matrix:
   include:
-
-# ubuntu, gcc
-- os: linux
-  compiler: gcc
-  addons:
-    apt:
-      sources:
+  
+  # Ubuntu, g++-7
+  - os: linux
+    addons:
+      apt:
+        sources:
         - ubuntu-toolchain-r-test
-      packages:
+        packages:        
         - libboost1.55-all-dev
-        - g++-7
-        - gcc-7
+          - g++-7
+          - gcc-7
     env:
     - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
     - LABEL="linux-g++-7"
-    - DEPLOY="true"
-      
-# OSX, g++-7  
-- os: osx
-  osx_image: xcode10
-  compiler: gcc
-  env:
+    - Deploy ="true"
+    
+  # OSX, g++-7
+  - os: osx
+    osx_image: xcode10
+    compiler: gcc
+    addons:
+     homebrew:
+      packages:
+       - boost
+    update: true
+    env:
     - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
-    - LABEL="osx-g++-7"
+    - LABEL="osx-g++-7"  
+    
+  # OSX, clang
+  - os: osx
+    osx_image: xcode10
+    compiler: clang
+    addons:
+     homebrew:
+      packages:
+       - boost
+    update: true
+    env:
+    - MATRIX_EVAL="CC=clang && CXX=clang++"
+    - LABEL="osx-clang"
+    - Deploy ="true"
    
-# OSX, clang
-- os: osx
-  osx_image: xcode10
-  compiler: clang
-  env:
-   - MATRIX_EVAL="CC=clang && CXX=clang++"
-   - LABEL="osx-clang"
-
 before_install:
-   - eval $MATRIX_EVAL
-   
-install:
-- if [ $TRAVIS_OS_NAME = osx ]; then brew cask uninstall --force oclint || true ; fi
-- if [[ "$LABEL" == "osx-g++-7" ]]; then brew install gcc@7 ; fi
-
+ - eval $MATRIX_EVAL
+ - if [ $TRAVIS_OS_NAME = osx ]; then brew cask uninstall --force oclint || true ; fi
+ - if [ $TRAVIS_OS_NAME = osx ]; then brew install gcc@7 ; fi
+ 
 script:
   - eval $MATRIX_EVAL
   - mkdir build && cd build
