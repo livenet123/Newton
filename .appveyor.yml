@@ -16,10 +16,6 @@ environment:
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
       BOOST_ROOT: C:\Libraries\boost_1_66_0
       BOOST_LIBRARYDIR: C:\Libraries\boost_1_66_0\lib32-msvc-14.1
-      
-before_build:
-     - ps: 'Write-Host "Running $env:BUILDER with $env:GENERATOR" -ForegroundColor Magenta'
-     - if "%BUILDER%"=="CMake" cmake.exe -G "%GENERATOR%" -DCMAKE_BUILD_TYPE=%CONFIGURATION% %APPVEYOR_BUILD_FOLDER%
      
 build_script:
    - md build && cd build
