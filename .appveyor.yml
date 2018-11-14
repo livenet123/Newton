@@ -1,6 +1,7 @@
 version: 1.0.{build}
 
 image: Visual Studio 2017
+configuration: Release
 
 environment:
  matrix:
@@ -21,5 +22,5 @@ build_script:
    - md build && cd build
    - ps: 'Write-Host "Running $env:BUILDER with $env:GENERATOR" -ForegroundColor Magenta'
    - if "%BUILDER%"=="CMake" cmake -G "%GENERATOR%" -DCMAKE_BUILD_TYPE=%CONFIGURATION% ..
-   - MSBuild Newton.sln /p:Configuration=Release /m
+   - MSBuild Newton.sln /p:Configuration=%CONFIGURATION% /m
 
