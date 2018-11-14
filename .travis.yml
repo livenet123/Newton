@@ -17,8 +17,8 @@ matrix:
         - libboost1.55-all-dev
   env:
     - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9
-    - CXXFLAGS="-std=gnu++11"
-    
+    - DEPLOY="true"
+      
 # OSX, gcc  
 - os: osx
   osx_image: xcode10
@@ -26,14 +26,14 @@ matrix:
   env:
     - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9
     - LABEL="osx-g++-4.9"
-    - STRIP="strip"
-    
+   
 # OSX, clang
 - os: osx
   osx_image: xcode10
   compiler: clang
     env:
     - MATRIX_EVAL="CC=clang && CXX=clang++"
+    - DEPLOY="true"
 
 before_install:
    - eval $MATRIX_EVAL
@@ -50,16 +50,16 @@ before_deploy:
   - cd src
   - mkdir Newton-${TRAVIS_TAG}
   - mv Newtond miner simplewallet walletd connectivity_tool Newton-${TRAVIS_TAG}/
-  - tar cvfz Newton-${TRAVIS_TAG}-${TRAVIS_OS_NAME}.tar.gz Newton-${TRAVIS_TAG}/
-  - git tag "$(date +'%Y%m%d%H%M%S')-$(git log --format=%h -1)"
+  - tar cvfz NewtonCLI-${TRAVIS_TAG}-${TRAVIS_OS_NAME}.tar.gz Newton-${TRAVIS_TAG}/ 
 
 deploy:
   provider: releases
   api_key:
     secure: xqOe+b0vzsfzjE4YsViKTKZNbMEDsrkCmObp4CVKoe3BUyBroImZscV5cbGW08ZQlXrZESE1H4a+eDAoaelpMOgKhz1rdCl6Do6IGLzoWSZyY5dslEWuUaWmJ0BmdsFdD5r77WnUd049po0wbrKYl43sjWPxpufndSW9T3dPTQuyRtV0KuD9nGJCjroy1JV1ZLiIc6uQ7PmXR4B2GQEXf+CQ0eMFyHSx1I/PBhkug+RtmE9AvTjd5vxQ7JizSeub3lv/ofgu8XKxxIjSqT4guuMktOw7V4Wl+umrYAsmcPFQOxXqGsB0aRGo/xFM6O4s1Qv4UphbxQXdH0cTLvO9da729EXVeu0R7/C878UC171MQ5xTin9lD1T569ZNo0JaOcgnp2KPQdsgO9qQZ3rDd2lzO23UVEjBXq3uOB0fCe03YzyCrjPyvkWfEd5tQnBs9JKdp9WhzMWugOsAQwgEE/C9UPGA5cPJFBj541DQc+qZu63B2r0AeeZeSeOZXkYY9S5oUuhnZX1k8nYQsioCs8IHTeVq5tq1C6YDj5NJwkI2gJ66jwxB63ETlHwjSVzhvse9sGfYkqcl5Azug6ifPn8DuQww9CZiRRDVYdVVs9bjSSK8/sRjJkkjWK7CFu+j9GFnDW/vekm/4QL+gj2WL1Mjf6YhAioX4yeJryyLvTo=
   file:
-    - Newton-${TRAVIS_TAG}-${TRAVIS_OS_NAME}.tar.gz
+    - NewtonCLI-${TRAVIS_TAG}-${TRAVIS_OS_NAME}.tar.gz
   skip_cleanup: true
   on:
     repo: livenet123/Newton
     tags: true
+    condition: "$DEPLOY = true"
