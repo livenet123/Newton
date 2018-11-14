@@ -12,8 +12,8 @@ matrix:
         - ubuntu-toolchain-r-test
         packages:        
         - libboost1.55-all-dev
-          - g++-7
-          - gcc-7
+        - g++-7
+        - gcc-7
     env:
     - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
     - LABEL="linux-g++-7"
@@ -27,7 +27,6 @@ matrix:
      homebrew:
       packages:
        - boost
-    update: true
     env:
     - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
     - LABEL="osx-g++-7"  
@@ -40,7 +39,6 @@ matrix:
      homebrew:
       packages:
        - boost
-    update: true
     env:
     - MATRIX_EVAL="CC=clang && CXX=clang++"
     - LABEL="osx-clang"
@@ -61,7 +59,7 @@ before_deploy:
   - mkdir Newton-${TRAVIS_TAG}
   - mv Newtond miner simplewallet walletd connectivity_tool Newton-${TRAVIS_TAG}/
   - tar cvfz NewtonCLI-${TRAVIS_TAG}-${TRAVIS_OS_NAME}.tar.gz Newton-${TRAVIS_TAG}/ 
-
+  
 deploy:
   provider: releases
   api_key:
