@@ -1,11 +1,15 @@
+Release notes 3.5.0
+- apply governance reward at block 196000
+- Updated RocksDB to release 5.15.10
+
 Release notes 3.0.0
 
 - Upgrade at block 145000
-- LWMA-2 Difficulty algorithm added 
+- LWMA-2 Difficulty algorithm added
 - increase full reward block size
 - add more checkpoints
 - remove inactive seed node
-- Updated RocksDB to release 5.14.3 
+- Updated RocksDB to release 5.14.3
 - add sign_message and verify_message commands to simpewallet
 - add sweep_dust command to simplewallet to sweep unmixable dust
 - add outgoing_transfers command to simplewallet
@@ -18,7 +22,7 @@ Release notes 3.0.0
 - add command to generate new wallet in tracking mode by importing tracking key
 - add status command to the Daemon
 - add more info to getinfo json rpc response
-- add fee address option to the remote Daemon this will be used for 
+- add fee address option to the remote Daemon this will be used for
    remote daemon fee. we set the fee 0.25% from tx amount and it will not exceed 1000 NCP
 - add missing rpc user and rpc password options to walletd authintication
 - add validateAddress method to rpc walletd API
@@ -32,9 +36,8 @@ Release notes 3.0.0
 Release notes 2.5.0
 
 - Updated RocksDB to release 5.14.0
-- fix cmake build 
+- fix cmake build
 
 Release notes 2.0.0
 
-- switch core to bytecoin core v2 
-
+- switch core to bytecoin core v2
