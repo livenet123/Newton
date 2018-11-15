@@ -1,6 +1,6 @@
 
-[![Build Status](https://travis-ci.org/livenet123/Newton.svg?branch=master)](https://travis-ci.org/livenet123/Newton)
-[![Build status](https://ci.appveyor.com/api/projects/status/7dg9qrptema5q9ar/branch/master?svg=true)](https://ci.appveyor.com/project/livenet123/newton-awyxq/branch/master)
+[![Build Status](https://travis-ci.org/livenet123/Newton.svg?branch=devel)](https://travis-ci.org/livenet123/Newton)
+[![Build status](https://ci.appveyor.com/api/projects/status/7dg9qrptema5q9ar/branch/devel?svg=true)](https://ci.appveyor.com/project/livenet123/newton-awyxq/branch/devel)
 
 
 ## Building Newton
