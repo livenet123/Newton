@@ -1090,7 +1090,7 @@ bool Core::getBlockTemplate(BlockTemplate& b, const AccountPublicAddress& adr, c
           b.timestamp = medianTimestamp;
       }
   }
-  
+
   size_t medianSize = calculateCumulativeBlocksizeLimit(height) / 2;
 
   assert(!chainsStorage.empty());
@@ -1463,23 +1463,45 @@ std::error_code Core::validateBlock(const CachedBlock& cachedBlock, IBlockchainC
   }
 
   for (const auto& output : block.baseTransaction.outputs) {
-    if (output.amount == 0) {
-      return error::TransactionValidationError::OUTPUT_ZERO_AMOUNT;
-    }
+	  if (output.amount == 0) {
+		  return error::TransactionValidationError::OUTPUT_ZERO_AMOUNT;
+	  }
 
-    if (output.target.type() == typeid(KeyOutput)) {
-      if (!check_key(boost::get<KeyOutput>(output.target).key)) {
-        return error::TransactionValidationError::OUTPUT_INVALID_KEY;
-      }
-    } else {
-      return error::TransactionValidationError::OUTPUT_UNKNOWN_TYPE;
-    }
+	  if (output.target.type() == typeid(KeyOutput)) {
+		  if (!check_key(boost::get<KeyOutput>(output.target).key)) {
+			  return error::TransactionValidationError::OUTPUT_INVALID_KEY;
+		  }
+	  }
+	  else {
+		  return error::TransactionValidationError::OUTPUT_UNKNOWN_TYPE;
+	  }
 
-    if (std::numeric_limits<uint64_t>::max() - output.amount < minerReward) {
-      return error::TransactionValidationError::OUTPUTS_AMOUNT_OVERFLOW;
-    }
+	  if (std::numeric_limits<uint64_t>::max() - output.amount < minerReward) {
+		  return error::TransactionValidationError::OUTPUTS_AMOUNT_OVERFLOW;
+	  }
 
     minerReward += output.amount;
+  }
+
+ bool enable_Governace = currency.isGovernanceEnabled(cachedBlock.getBlockIndex());
+ if (enable_Governace) {
+
+	  uint64_t governanceReward = currency.getGovernanceReward(minerReward);
+	  if (block.baseTransaction.outputs.back().amount != governanceReward) {
+		  return error::TransactionValidationError::BASE_WRONG_GOVERNANCE_AMOUNT;
+	  }
+
+	  AccountKeys governanceKeys;
+	  currency.getGovernanceAddressAndKey(governanceKeys);
+
+	  Crypto::PublicKey tx_pub_key = CryptoNote::getTransactionPublicKeyFromExtra(block.baseTransaction.extra);
+	  CryptoNote::KeyOutput governanceOutputTarget = boost::get<KeyOutput>(block.baseTransaction.outputs.back().target);
+
+	  size_t pos = block.baseTransaction.outputs.size();
+	  if (!CryptoNote::is_out_to_acc(governanceKeys, governanceOutputTarget, tx_pub_key, pos - 1))
+	  {
+		  return error::TransactionValidationError::BASE_INVALID_GOVERNANCE_KEY;
+	  }
   }
 
   return error::BlockValidationError::VALIDATION_SUCCESS;
@@ -1991,7 +2013,7 @@ BlockDetails Core::getBlockDetails(const Crypto::Hash& blockHash) const {
 
   uint32_t blockIndex = segment->getBlockIndex(blockHash);
   BlockTemplate blockTemplate = restoreBlockTemplate(segment, blockIndex);
-  
+
   BlockDetails blockDetails;
   blockDetails.majorVersion = blockTemplate.majorVersion;
   blockDetails.minorVersion = blockTemplate.minorVersion;
@@ -2154,7 +2176,7 @@ TransactionDetails Core::getTransactionDetails(const Crypto::Hash& transactionHa
   }
   transactionDetails.extra.publicKey = transaction->getTransactionPublicKey();
   transaction->getExtraNonce(transactionDetails.extra.nonce);
-  
+
   transactionDetails.signatures = rawTransaction.signatures;
 
   transactionDetails.inputs.reserve(transaction->getInputCount());

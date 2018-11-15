@@ -46,7 +46,9 @@ enum class TransactionValidationError {
   OUTPUT_UNKNOWN_TYPE,
   OUTPUTS_AMOUNT_OVERFLOW,
   WRONG_AMOUNT,
-  WRONG_TRANSACTION_UNLOCK_TIME
+  WRONG_TRANSACTION_UNLOCK_TIME,
+  BASE_WRONG_GOVERNANCE_AMOUNT,
+  BASE_INVALID_GOVERNANCE_KEY
 };
 
 // custom category:
@@ -89,6 +91,9 @@ public:
       case TransactionValidationError::OUTPUTS_AMOUNT_OVERFLOW: return "Transaction has outputs amount overflow";
       case TransactionValidationError::WRONG_AMOUNT: return "Transaction wrong amount";
       case TransactionValidationError::WRONG_TRANSACTION_UNLOCK_TIME: return "Transaction has wrong unlock time";
+	    case TransactionValidationError::BASE_WRONG_GOVERNANCE_AMOUNT: return "Base wrong governance amount";
+	    case TransactionValidationError::BASE_INVALID_GOVERNANCE_KEY: return "Base incorrect governance address";
+
       default: return "Unknown error";
     }
   }
