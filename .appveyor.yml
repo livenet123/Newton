@@ -1,17 +1,18 @@
 version: 1.0.{build}
 
 image: Visual Studio 2017
-configuration: Release
 
 environment:
  matrix:
     - PLATFORM: x64
+      configuration: Release
       BUILDER: CMake
       GENERATOR: "Visual Studio 15 2017 Win64"
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
       BOOST_ROOT: C:\Libraries\boost_1_66_0
       BOOST_LIBRARYDIR: C:\Libraries\boost_1_66_0\lib64-msvc-14.1
     - PLATFORM: x86
+      configuration: Release
       BUILDER: CMake
       GENERATOR: "Visual Studio 15 2017"
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
@@ -22,5 +23,5 @@ build_script:
    - md build && cd build
    - ps: 'Write-Host "Running $env:BUILDER with $env:GENERATOR" $env:PLATFORM -ForegroundColor Magenta'
    - if "%BUILDER%"=="CMake" cmake -G "%GENERATOR%" -DCMAKE_BUILD_TYPE=%CONFIGURATION% ..
-   - MSBuild Newton.sln /p:Configuration=%CONFIGURATION% /p:Platform=%PLATFORM% /m
+   - MSBuild Newton.sln
 
