@@ -78,6 +78,9 @@ public:
   uint32_t zawyLWMA2DifficultyBlockIndex() const { return m_zawyLWMA2DifficultyBlockIndex; }
   size_t zawyLWMA2DifficultyN() const { return m_zawyLWMA2DifficultyN; }
 
+  uint32_t governancePercent() const { return m_governancePercent; }
+  uint32_t governanceHeight() const { return m_governanceHeight; }
+
   size_t rewardBlocksWindow() const { return m_rewardBlocksWindow; }
   size_t blockGrantedFullRewardZone() const { return m_blockGrantedFullRewardZone; }
   size_t blockGrantedFullRewardZoneByBlockVersion(uint8_t blockMajorVersion) const;
@@ -170,6 +173,10 @@ public:
 
   static const std::vector<uint64_t> PRETTY_AMOUNTS;
 
+  bool isGovernanceEnabled(uint32_t height) const;
+  uint64_t getGovernanceReward(uint64_t base_reward) const;
+  bool getGovernanceAddressAndKey(AccountKeys& m_account_keys) const;
+
 private:
   Currency(Logging::ILogger& log) : logger(log, "currency") {
   }
@@ -198,6 +205,9 @@ private:
   uint32_t m_zawyLWMA2DifficultyBlockIndex;
   size_t m_zawyLWMA2DifficultyN;
   
+  uint32_t m_governancePercent; 
+  uint32_t m_governanceHeight;
+
   size_t m_rewardBlocksWindow;
   size_t m_blockGrantedFullRewardZone;
   size_t m_minerTxBlobReservedSize;
@@ -282,6 +292,9 @@ public:
    
   CurrencyBuilder& zawyLWMA2DifficultyBlockIndex(uint32_t val) { m_currency.m_zawyLWMA2DifficultyBlockIndex = val; return *this; }
   CurrencyBuilder& zawyLWMA2DifficultyN(size_t val) { m_currency.m_zawyLWMA2DifficultyN = val; return *this; }
+
+  CurrencyBuilder& governancePercent(uint32_t val) { m_currency.m_governancePercent = val; return *this; }
+  CurrencyBuilder& governanceHeight(uint32_t val) { m_currency.m_governanceHeight = val; return *this; }
 
   CurrencyBuilder& rewardBlocksWindow(size_t val) { m_currency.m_rewardBlocksWindow = val; return *this; }
   CurrencyBuilder& blockGrantedFullRewardZone(size_t val) { m_currency.m_blockGrantedFullRewardZone = val; return *this; }

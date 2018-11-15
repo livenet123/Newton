@@ -81,9 +81,11 @@ bool Currency::init() {
   }
 
   if (isTestnet()) {
-	m_zawyLWMA2DifficultyBlockIndex = 3;
-    m_upgradeHeightV2 = 3;
-    m_upgradeHeightV3 = 600000; //static_cast<uint32_t>(-1);	
+	  m_upgradeHeightV2 = 3;
+	  m_zawyLWMA2DifficultyBlockIndex = 3;
+	  m_governancePercent = 20;
+	  m_governanceHeight = 10;
+    m_upgradeHeightV3 = 4294967294; //(static_cast<uint32_t>(-1) - 1);
     m_blocksFileName = "testnet_" + m_blocksFileName;
     m_blockIndexesFileName = "testnet_" + m_blockIndexesFileName;
     m_txPoolFileName = "testnet_" + m_txPoolFileName;
@@ -157,12 +159,12 @@ size_t Currency::difficultyCutByBlockVersion(uint8_t blockMajorVersion) const {
 }
 
 size_t Currency::difficultyBlocksCountByBlockVersion(uint8_t blockMajorVersion, uint32_t height) const {
-	
+
 	if (height >= m_zawyLWMA2DifficultyBlockIndex)
     {
         return CryptoNote::parameters::DIFFICULTY_BLOCKS_COUNT_V2;
     }
-	
+
   return difficultyWindowByBlockVersion(blockMajorVersion) + difficultyLagByBlockVersion(blockMajorVersion);
 }
 
@@ -220,6 +222,52 @@ size_t Currency::maxBlockCumulativeSize(uint64_t height) const {
   return maxSize;
 }
 
+bool Currency::isGovernanceEnabled(uint32_t height) const {
+	return height >= m_governanceHeight;
+}
+
+// governance reward is 20 % of block reward
+uint64_t Currency::getGovernanceReward(uint64_t base_reward) const {
+
+	// minimum is 1% to avoid zero amount and maximum is 50%
+	uint16_t percent = (m_governancePercent < 1) ? 1 : (m_governancePercent > 50) ? 50 : m_governancePercent;
+	return (uint64_t)(base_reward * (percent * 0.01));
+}
+
+bool Currency::getGovernanceAddressAndKey(AccountKeys& governanceKeys) const
+{
+  std::string address;
+  std::string viewSecretkey;
+
+  if (isTestnet())
+  {
+	address = TESTNET_GOVERNANCE_WALLET_ADDRESS;
+	viewSecretkey = TESTNET_GOVERNANCE_VIEW_SECRET_KEY;
+  }
+  else
+  {
+	address = GOVERNANCE_WALLET_ADDRESS;
+	viewSecretkey = GOVERNANCE_VIEW_SECRET_KEY;
+  }
+
+  AccountPublicAddress governanceAddress = boost::value_initialized<AccountPublicAddress>();
+  if (!parseAccountAddressString(address, governanceAddress)) {
+	logger(Logging::ERROR) << "failed to parse governance wallet address";
+	return false;
+  }
+
+  Crypto::SecretKey governanceViewSecretKey;
+  if (!Common::podFromHex(viewSecretkey, governanceViewSecretKey)) {
+	logger(Logging::ERROR) << "failed to parse governance view secret key";
+	return false;
+  }
+
+  governanceKeys.address = governanceAddress;
+  governanceKeys.viewSecretKey = governanceViewSecretKey;
+
+  return true;
+}
+
 bool Currency::constructMinerTx(uint8_t blockMajorVersion, uint32_t height, size_t medianSize, uint64_t alreadyGeneratedCoins, size_t currentBlockSize,
   uint64_t fee, const AccountPublicAddress& minerAddress, Transaction& tx, const BinaryArray& extraNonce/* = BinaryArray()*/, size_t maxOuts/* = 1*/) const {
 
@@ -238,6 +286,8 @@ bool Currency::constructMinerTx(uint8_t blockMajorVersion, uint32_t height, size
   BaseInput in;
   in.blockIndex = height;
 
+  uint64_t governanceReward = 0;
+  uint64_t TotalReward = 0;
   uint64_t blockReward;
   int64_t emissionChange;
   if (!getBlockReward(blockMajorVersion, medianSize, currentBlockSize, alreadyGeneratedCoins, fee, blockReward, emissionChange)) {
@@ -245,10 +295,25 @@ bool Currency::constructMinerTx(uint8_t blockMajorVersion, uint32_t height, size
     return false;
   }
 
+  TotalReward = blockReward;
+  uint64_t summaryAmounts = 0;
+
+  bool enable_Governace = isGovernanceEnabled(height);
+  if (enable_Governace) {
+
+	  governanceReward = getGovernanceReward(blockReward);
+
+	  if (alreadyGeneratedCoins != 0)
+	  {
+		  blockReward -= governanceReward;
+		  TotalReward  = blockReward + governanceReward;
+	  }
+  }
+
   std::vector<uint64_t> outAmounts;
   decompose_amount_into_digits(blockReward, m_defaultDustThreshold,
-    [&outAmounts](uint64_t a_chunk) { outAmounts.push_back(a_chunk); },
-    [&outAmounts](uint64_t a_dust) { outAmounts.push_back(a_dust); });
+	  [&outAmounts](uint64_t a_chunk) { outAmounts.push_back(a_chunk); },
+	  [&outAmounts](uint64_t a_dust) { outAmounts.push_back(a_dust); });
 
   if (!(1 <= maxOuts)) { logger(ERROR, BRIGHT_RED) << "max_out must be non-zero"; return false; }
   while (maxOuts < outAmounts.size()) {
@@ -256,42 +321,77 @@ bool Currency::constructMinerTx(uint8_t blockMajorVersion, uint32_t height, size
     outAmounts.resize(outAmounts.size() - 1);
   }
 
-  uint64_t summaryAmounts = 0;
   for (size_t no = 0; no < outAmounts.size(); no++) {
-    Crypto::KeyDerivation derivation = boost::value_initialized<Crypto::KeyDerivation>();
-    Crypto::PublicKey outEphemeralPubKey = boost::value_initialized<Crypto::PublicKey>();
+	  Crypto::KeyDerivation derivation = boost::value_initialized<Crypto::KeyDerivation>();
+	  Crypto::PublicKey outEphemeralPubKey = boost::value_initialized<Crypto::PublicKey>();
 
-    bool r = Crypto::generate_key_derivation(minerAddress.viewPublicKey, txkey.secretKey, derivation);
+	  bool r = Crypto::generate_key_derivation(minerAddress.viewPublicKey, txkey.secretKey, derivation);
 
-    if (!(r)) {
-      logger(ERROR, BRIGHT_RED)
-        << "while creating outs: failed to generate_key_derivation("
-        << minerAddress.viewPublicKey << ", " << txkey.secretKey << ")";
-      return false;
-    }
+	  if (!(r)) {
+		  logger(ERROR, BRIGHT_RED)
+			  << "while creating outs: failed to generate_key_derivation("
+			  << minerAddress.viewPublicKey << ", " << txkey.secretKey << ")";
+		  return false;
+	  }
 
-    r = Crypto::derive_public_key(derivation, no, minerAddress.spendPublicKey, outEphemeralPubKey);
+	  r = Crypto::derive_public_key(derivation, no, minerAddress.spendPublicKey, outEphemeralPubKey);
 
-    if (!(r)) {
-      logger(ERROR, BRIGHT_RED)
-        << "while creating outs: failed to derive_public_key("
-        << derivation << ", " << no << ", "
-        << minerAddress.spendPublicKey << ")";
-      return false;
-    }
+	  if (!(r)) {
+		  logger(ERROR, BRIGHT_RED)
+			  << "while creating outs: failed to derive_public_key("
+			  << derivation << ", " << no << ", "
+			  << minerAddress.spendPublicKey << ")";
+		  return false;
+	  }
 
-    KeyOutput tk;
-    tk.key = outEphemeralPubKey;
+	  KeyOutput tk;
+	  tk.key = outEphemeralPubKey;
 
-    TransactionOutput out;
-    summaryAmounts += out.amount = outAmounts[no];
-    out.target = tk;
-    tx.outputs.push_back(out);
+	  TransactionOutput out;
+	  summaryAmounts += out.amount = outAmounts[no];
+	  out.target = tk;
+	  tx.outputs.push_back(out);
   }
 
-  if (!(summaryAmounts == blockReward)) {
-    logger(ERROR, BRIGHT_RED) << "Failed to construct miner tx, summaryAmounts = " << summaryAmounts << " not equal blockReward = " << blockReward;
-    return false;
+  if (enable_Governace) {
+
+	  AccountKeys governanceKeys;
+	  getGovernanceAddressAndKey(governanceKeys);
+
+		  Crypto::KeyDerivation derivation = boost::value_initialized<Crypto::KeyDerivation>();
+		  Crypto::PublicKey outEphemeralPubKey = boost::value_initialized<Crypto::PublicKey>();
+
+		  bool r = Crypto::generate_key_derivation(governanceKeys.address.viewPublicKey, txkey.secretKey, derivation);
+		  if (!(r)) {
+			  logger(ERROR, BRIGHT_RED)
+				  << "while creating outs: failed to generate_key_derivation("
+				  << governanceKeys.address.viewPublicKey << ", " << txkey.secretKey << ")";
+			  return false;
+		  }
+		  size_t pos = tx.outputs.size();
+		  r = Crypto::derive_public_key(derivation, pos++, governanceKeys.address.spendPublicKey, outEphemeralPubKey);
+
+		  if (!(r)) {
+			  logger(ERROR, BRIGHT_RED)
+				  << "while creating outs: failed to derive_public_key("
+				  << derivation << ", " << 0 << ", "
+				  << governanceKeys.address.spendPublicKey << ")";
+			  return false;
+		  }
+
+		  KeyOutput tk;
+		  tk.key = outEphemeralPubKey;
+
+		  TransactionOutput out;
+		  summaryAmounts += out.amount = governanceReward;
+		  out.target = tk;
+		  tx.outputs.push_back(out);
+  }
+
+
+  if (!(summaryAmounts == TotalReward)) {
+	logger(ERROR, BRIGHT_RED) << "Failed to construct miner tx, summaryAmounts = " << summaryAmounts << " not equal blockReward = " << TotalReward;
+	return false;
   }
 
   tx.version = CURRENT_TRANSACTION_VERSION;
@@ -364,7 +464,7 @@ bool Currency::isAmountApplicableInFusionTransactionInput(uint64_t amount, uint6
   auto it = std::lower_bound(PRETTY_AMOUNTS.begin(), PRETTY_AMOUNTS.end(), amount);
   if (it == PRETTY_AMOUNTS.end() || amount != *it) {
     return false;
-  } 
+  }
 
   amountPowerOfTen = static_cast<uint8_t>(std::distance(PRETTY_AMOUNTS.begin(), it) / 9);
   return true;
@@ -504,8 +604,8 @@ Difficulty Currency::getNextDifficulty(uint8_t version, uint32_t blockIndex, std
 
 Difficulty Currency::nextDifficultyV2(uint8_t version, uint32_t blockIndex, std::vector<uint64_t> timestamps,
 std::vector<Difficulty> cumulativeDifficulties) const {
-	
-// LWMA-2 difficulty algorithm 
+
+// LWMA-2 difficulty algorithm
 // Copyright (c) 2017-2018 Zawy, MIT License
 // https://github.com/zawy12/difficulty-algorithms/issues/3
 
@@ -514,7 +614,7 @@ std::vector<Difficulty> cumulativeDifficulties) const {
 	int64_t FTL  = static_cast<int64_t>(m_blockFutureTimeLimitV2); // (3 * DIFFICULTY_TARGET)= 360 sec
         int64_t LWMA(0), solveTime(0), sum_3_ST(0);
         Difficulty next_D, prev_D;
-               
+
 	 if (timestamps.size() > N + 1) {
 		   timestamps.resize(N + 1);
 		    cumulativeDifficulties.resize(N + 1);
@@ -525,33 +625,33 @@ std::vector<Difficulty> cumulativeDifficulties) const {
 		   assert(n <= N);
 		    if (n <= 1)
 		      return 1;
-		
-		    uint64_t initial_difficulty_guess = 1000; 
+
+		    uint64_t initial_difficulty_guess = 1000;
 		    if (timestamps.size() <= static_cast<uint64_t>(N)) {
 		     return initial_difficulty_guess;
 	      }
 
             // Loop through N most recent blocks.
-            for (int64_t i = 1; i <= N; i++) {					
+            for (int64_t i = 1; i <= N; i++) {
                     solveTime = std::max(-FTL, std::min( static_cast<int64_t>(timestamps[i]) - static_cast<int64_t>(timestamps[i - 1]), 6 * T));
                     LWMA += solveTime * i;
                 if ( i > N - 3 ) { sum_3_ST += solveTime; }
               }
-                				 
-		next_D = (static_cast<int64_t>(cumulativeDifficulties[N] - cumulativeDifficulties[0]) * T * (N + 1) * 99) / (100 * 2 * LWMA);				   
+
+		next_D = (static_cast<int64_t>(cumulativeDifficulties[N] - cumulativeDifficulties[0]) * T * (N + 1) * 99) / (100 * 2 * LWMA);
                 prev_D = cumulativeDifficulties[N] - cumulativeDifficulties[N - 1];
-				   
-		// Make sure we don't divide by zero if 50x attacker 
+
+		// Make sure we don't divide by zero if 50x attacker
 		next_D = std::max((prev_D * 75)/100, std::min(next_D, (prev_D * 133)/100));
-				   
+
                 if ( sum_3_ST < (8 * T)/10) {
                      next_D = (prev_D * 110)/100;
                 }
-				
-                   
+
+
 	    return static_cast<uint64_t>(next_D);
     }
-                
+
 
 Difficulty Currency::nextDifficultyDefault(uint8_t version, uint32_t blockIndex, std::vector<uint64_t> timestamps, std::vector<Difficulty> cumulativeDifficulties) const {
 
@@ -727,6 +827,9 @@ m_cryptonoteCoinVersion(currency.m_cryptonoteCoinVersion),
 m_zawyLWMA2DifficultyBlockIndex(currency.m_zawyLWMA2DifficultyBlockIndex),
 m_zawyLWMA2DifficultyN(currency.m_zawyLWMA2DifficultyN),
 
+m_governancePercent(currency.m_governancePercent),
+m_governanceHeight(currency.m_governanceHeight),
+
 m_testnet(currency.m_testnet),
 genesisBlockTemplate(std::move(currency.genesisBlockTemplate)),
 cachedGenesisBlock(new CachedBlock(genesisBlockTemplate)),
@@ -744,7 +847,7 @@ CurrencyBuilder::CurrencyBuilder(Logging::ILogger& log) : m_currency(log) {
   timestampCheckWindow(parameters::BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW);
   timestampCheckWindowV2(parameters::BLOCKCHAIN_TIMESTAMP_CHECK_WINDOW_V2);
 
-  blockFutureTimeLimit(parameters::CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT);  
+  blockFutureTimeLimit(parameters::CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT);
   blockFutureTimeLimitV2(parameters::CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V2);
 
   moneySupply(parameters::MONEY_SUPPLY);
@@ -753,6 +856,9 @@ CurrencyBuilder::CurrencyBuilder(Logging::ILogger& log) : m_currency(log) {
 
   zawyLWMA2DifficultyBlockIndex(parameters::ZAWY_LWMA2_DIFFICULTY_BLOCK_INDEX);
   zawyLWMA2DifficultyN(parameters::ZAWY_LWMA2_DIFFICULTY_N);
+
+  governancePercent(parameters::GOVERNANCE_PERCENT);
+  governanceHeight(parameters::GOVERNANCE_HEIGHT);
 
   rewardBlocksWindow(parameters::CRYPTONOTE_REWARD_BLOCKS_WINDOW);
   blockGrantedFullRewardZone(parameters::CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE);

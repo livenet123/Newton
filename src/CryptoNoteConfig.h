@@ -21,6 +21,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <string>
 
 namespace CryptoNote {
 namespace parameters {
@@ -46,6 +47,9 @@ const uint32_t ZAWY_LWMA2_DIFFICULTY_BLOCK_INDEX             = 145000;
 const size_t   DIFFICULTY_WINDOW_V2                          = 60;
 const size_t   ZAWY_LWMA2_DIFFICULTY_N                 		   = DIFFICULTY_WINDOW_V2;
 const uint64_t DIFFICULTY_BLOCKS_COUNT_V2                    = DIFFICULTY_WINDOW_V2 + 1;
+
+const uint16_t GOVERNANCE_PERCENT                             = 20;  // 20 percent of block reward
+const uint32_t GOVERNANCE_HEIGHT                              = 196000;
 
 const unsigned EMISSION_SPEED_FACTOR                         = 18;
 static_assert(EMISSION_SPEED_FACTOR <= 8 * sizeof(uint64_t), "Bad EMISSION_SPEED_FACTOR");
@@ -90,7 +94,7 @@ const size_t   FUSION_TX_MIN_IN_OUT_COUNT_RATIO              = 4;
 
 const uint32_t KEY_IMAGE_CHECKING_BLOCK_INDEX                = 0;
 const uint32_t UPGRADE_HEIGHT_V2                             = 145000;
-const uint32_t UPGRADE_HEIGHT_V3                             = 600000;
+const uint32_t UPGRADE_HEIGHT_V3                             = 4294967294;
 const unsigned UPGRADE_VOTING_THRESHOLD                      = 90;               // percent
 const uint32_t UPGRADE_VOTING_WINDOW                         = EXPECTED_NUMBER_OF_BLOCKS_PER_DAY;  // blocks
 const uint32_t UPGRADE_WINDOW                                = EXPECTED_NUMBER_OF_BLOCKS_PER_DAY;  // blocks
@@ -148,6 +152,13 @@ const char* const SEED_NODES[] = {
  };
 
 
+std::string const GOVERNANCE_WALLET_ADDRESS                   = "cczJoyYFvf5gBPndTdZHsQSu4MRU4hsg2h7gr4hZXrqpa3YLy1aeMixh2rQtUTQkib6uRUyNaYpya4yHiBm81AKe3JMPeosA7p";
+std::string const GOVERNANCE_VIEW_SECRET_KEY                  = "ec0dcadca1936177c4cd7b98629cc80d49f4deef2ef046a8f2b047271d229704";
+
+std::string const TESTNET_GOVERNANCE_WALLET_ADDRESS           = "cczJijPPtCa6K2kQ2LxGpU9kU1oBCgmoaCE6o4naV64p3YsehAeF2MqbPts7FedfLJEPnW49HdDUq9reRy6bmb4u9qmJWXRMtT";
+std::string const TESTNET_GOVERNANCE_VIEW_SECRET_KEY          = "7626ee1dcf5492754b8a90c8bb3dcb42f4b71ab0e5d7478b72baa713a1e59706";
+
+
 struct CheckpointData {
   uint32_t index;
   const char* blockId;
@@ -187,8 +198,22 @@ const std::initializer_list<CheckpointData> CHECKPOINTS = {
 	{116000, "fd904d5c4c9b7217c9aef8e7a46a450d326676a847024be533fc55524d46ac2c"},
 	{120000, "7ce836e22e53d2a35816e42a98e1322af30e33620bf7d469b3f0bc0fb0ac98b3"},
 	{124000, "1a038acc443317a58933d5ececa974486edf4936ef7cf52d27797e023fe6a281"},
-  {128000, "7c33bd046eaa95da1ed89faa1f98ab961963755ca77c72a1682d82c5185afbb9"},
-	{132000, "b5bc1b8c496bcf4da14a496f2430a2338d39ff9e4ea6a2bd85b00624bd976bf6"}
+	{128000, "7c33bd046eaa95da1ed89faa1f98ab961963755ca77c72a1682d82c5185afbb9"},
+	{132000, "b5bc1b8c496bcf4da14a496f2430a2338d39ff9e4ea6a2bd85b00624bd976bf6"},
+	{136000, "e20bf930e52a239c2333339ba92f3ecd7940e79ced5631d035a36792acadeb78"},
+	{140000, "6915889a9a52c12b2f43a97a7fbb278678058ec439b7084a2d4de9d13001a7ea"},
+	{144000, "933bf4fcc6d195b19948cac600b9f665caea1d280c33c01ee9353e20e1b10bae"},
+	{148000, "75e3bfdf46c7bc1287b4de3ea2146c5991c2cffb965778ea9cf2fff2a9bceaf1"},
+	{152000, "a78decfcf3fff41b927655b9cfbe640b7c599e37e73b5fa41b0ce2fbe6e6eb59"},
+	{156000, "b399bf53df460b3c3aeae7bf830ed95ed21da2dfb8046f69cdec386340206f73"},
+	{160000, "56b9a3edf1adb02cceca3307eaa1694fd3d22b54e8b25e5567e28f9791d9a1ca"},
+	{164000, "bb1567fdac2b9b05884566cfb7911d604f1c48e782c5eba4e666eaf3e4ab5b8b"},
+	{168000, "70655b33c799369557d1a63e614e67896396ab709d85f4cf7473b3e6a6d2f7d8"},
+	{172000, "02172bb159f7760b2aae1698a730bfb01525b2e952d96c3e2223966869a41e66"},
+	{176000, "141c4ab276c7fc66a6d4fd79c9cf8948b2f9f4b44719b5da2b04b70dcfb1ed8f"},
+	{180000, "29589d17e10de9488c44f6a87b7965c32d85f7c250c4e02fb211480dd9b3bff0"},
+	{184000, "53fb8da65f4e8b9591382cd81d3034a3e755b878a8f21a3d4c7ee5f05665e2df"}
+
  };
 
 } // CryptoNote
