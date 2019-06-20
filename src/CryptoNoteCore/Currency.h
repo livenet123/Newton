@@ -79,7 +79,8 @@ public:
   size_t zawyLWMA2DifficultyN() const { return m_zawyLWMA2DifficultyN; }
 
   uint32_t governancePercent() const { return m_governancePercent; }
-  uint32_t governanceHeight() const { return m_governanceHeight; }
+  uint32_t governanceHeightStart() const { return m_governanceHeightStart; }
+  uint32_t governanceHeightEnd() const { return m_governanceHeightEnd; }
 
   size_t rewardBlocksWindow() const { return m_rewardBlocksWindow; }
   size_t blockGrantedFullRewardZone() const { return m_blockGrantedFullRewardZone; }
@@ -162,6 +163,7 @@ public:
   Difficulty getNextDifficulty(uint8_t version, uint32_t blockIndex, std::vector<uint64_t> timestamps, std::vector<Difficulty> cumulativeDifficulties) const;
   Difficulty nextDifficultyDefault(uint8_t version, uint32_t blockIndex, std::vector<uint64_t> timestamps, std::vector<Difficulty> cumulativeDifficulties) const;
   Difficulty nextDifficultyV2(uint8_t version, uint32_t blockIndex, std::vector<uint64_t> timestamps, std::vector<Difficulty> cumulativeDifficulties) const; 
+  Difficulty nextDifficultyV3(uint8_t version, uint32_t blockIndex, std::vector<uint64_t> timestamps, std::vector<Difficulty> cumulativeDifficulties) const;
 
   bool checkProofOfWorkV1(Crypto::cn_context& context, const CachedBlock& block, Difficulty currentDifficulty) const;
   bool checkProofOfWorkV2(Crypto::cn_context& context, const CachedBlock& block, Difficulty currentDifficulty) const;
@@ -203,10 +205,12 @@ private:
   size_t m_cryptonoteCoinVersion;
     
   uint32_t m_zawyLWMA2DifficultyBlockIndex;
+  uint32_t m_zawyLWMA3DifficultyBlockIndex;
   size_t m_zawyLWMA2DifficultyN;
   
   uint32_t m_governancePercent; 
-  uint32_t m_governanceHeight;
+  uint32_t m_governanceHeightStart;
+  uint32_t m_governanceHeightEnd;
 
   size_t m_rewardBlocksWindow;
   size_t m_blockGrantedFullRewardZone;
@@ -291,10 +295,12 @@ public:
   CurrencyBuilder& cryptonoteCoinVersion(size_t val) { m_currency.m_cryptonoteCoinVersion = val; return *this; }
    
   CurrencyBuilder& zawyLWMA2DifficultyBlockIndex(uint32_t val) { m_currency.m_zawyLWMA2DifficultyBlockIndex = val; return *this; }
+  CurrencyBuilder& zawyLWMA3DifficultyBlockIndex(uint32_t val) { m_currency.m_zawyLWMA3DifficultyBlockIndex = val; return *this; }
   CurrencyBuilder& zawyLWMA2DifficultyN(size_t val) { m_currency.m_zawyLWMA2DifficultyN = val; return *this; }
 
   CurrencyBuilder& governancePercent(uint32_t val) { m_currency.m_governancePercent = val; return *this; }
-  CurrencyBuilder& governanceHeight(uint32_t val) { m_currency.m_governanceHeight = val; return *this; }
+  CurrencyBuilder& governanceHeightStart(uint32_t val) { m_currency.m_governanceHeightStart = val; return *this; }
+  CurrencyBuilder& governanceHeightEnd(uint32_t val) { m_currency.m_governanceHeightEnd = val; return *this; }
 
   CurrencyBuilder& rewardBlocksWindow(size_t val) { m_currency.m_rewardBlocksWindow = val; return *this; }
   CurrencyBuilder& blockGrantedFullRewardZone(size_t val) { m_currency.m_blockGrantedFullRewardZone = val; return *this; }

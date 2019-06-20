@@ -23,6 +23,7 @@
 #include <unordered_set>
 
 #include "Core.h"
+#include "Common/int-util.h"
 #include "Common/ShuffleGenerator.h"
 #include "Common/Math.h"
 #include "Common/MemoryInputStream.h"
@@ -269,7 +270,7 @@ uint64_t Core::getBlockTimestampByIndex(uint32_t blockIndex) const {
 
   auto timestamps = chainsLeaves[0]->getLastTimestamps(1, blockIndex, addGenesisBlock);
   assert(!(timestamps.size() == 1));
-
+  
   return timestamps[0];
 }
 
@@ -648,11 +649,81 @@ std::error_code Core::addBlock(const CachedBlock& cachedBlock, RawBlock&& rawBlo
 
         notifyObservers(makeDelTransactionMessage(std::move(hashes), Messages::DeleteTransaction::Reason::InBlock));
       } else {
+
         cache->pushBlock(cachedBlock, transactions, validatorState, cumulativeBlockSize, emissionChange, currentDifficulty, std::move(rawBlock));
         logger(Logging::WARNING) << "Block " << cachedBlock.getBlockHash() << " added to alternative chain. Index: " << (previousBlockIndex + 1);
 
         auto mainChainCache = chainsLeaves[0];
         if (cache->getCurrentCumulativeDifficulty() > mainChainCache->getCurrentCumulativeDifficulty()) {
+			
+			// Poisson check, courtesy of ryo-project
+			// https://github.com/ryo-currency/ryo-writeups/blob/master/poisson-writeup.md
+			// For longer reorgs, check if the timestamps are probable - if they aren't the diff algo has failed
+			// This check is meant to detect an offline bypass of timestamp < time() + ftl check
+			// It doesn't need to be very strict as it synergises with the median check
+			const std::vector<BlockTemplate> alt_chain = getAlternativeBlocks();
+			uint64_t alt_chain_size = getAlternativeBlockCount();
+			if (alt_chain_size >= CryptoNote::parameters::POISSON_CHECK_TRIGGER)
+			{									
+				uint64_t high_timestamp = alt_chain.back().timestamp;
+				Crypto::Hash low_block = alt_chain.front().previousBlockHash;
+				
+				//Make sure that the high_timestamp is really highest
+				for (size_t index = 0; index < alt_chain.size(); ++index)
+				{			
+				if (high_timestamp < alt_chain[index].timestamp)
+				high_timestamp = alt_chain[index].timestamp;
+				}
+
+				uint64_t block_ftl = CryptoNote::parameters::CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V2;
+				// This would fail later anyway
+				if (high_timestamp > getAdjustedTime() + block_ftl)
+				{
+					logger(Logging::ERROR) << "Attempting to move to an alternate chain, but it failed FTL check! Timestamp: " << high_timestamp << ", limit: " << getAdjustedTime() + block_ftl;					
+					return error::AddBlockErrorCode::FAILED_FTL_CHECK;
+				}
+
+				logger(Logging::WARNING) << "Poisson check triggered by reorg size of " << alt_chain_size;
+
+				uint64_t failed_checks = 0, i = 1;
+				for (; i <= CryptoNote::parameters::POISSON_CHECK_DEPTH; i++)
+				{
+					// This means we reached the genesis block
+					if (low_block == NULL_HASH)
+						break;
+
+					BlockTemplate blk;
+					blk = getBlockByHash(low_block);
+
+					uint64_t low_timestamp = blk.timestamp;
+					low_block = blk.previousBlockHash;
+
+					if (low_timestamp >= high_timestamp)
+					{
+						logger(Logging::INFO) << "Skipping check at depth " << i << " due to tampered timestamp on main chain.";
+						failed_checks++;
+						continue;
+					}
+
+					double lam = double(high_timestamp - low_timestamp) / double(CryptoNote::parameters::DIFFICULTY_TARGET);
+					if (calc_poisson_ln(lam, alt_chain_size + i) < CryptoNote::parameters::POISSON_LOG_P_REJECT)
+					{
+						logger(Logging::INFO) << "Poisson check at depth " << i << " failed! delta_t: " << (high_timestamp - low_timestamp) << " size: " << alt_chain_size + i;
+						failed_checks++;
+					}
+				}
+
+				i--; //Convert to number of checks
+				logger(Logging::INFO) << "Poisson check result " << failed_checks << " fails out of " << i;
+
+				if (failed_checks > i / 2)
+				{
+					logger(Logging::ERROR) << "Attempting to move to an alternate chain, but it failed Poisson check! " << failed_checks << " fails out of " << i << " alt_chain_size: " << alt_chain_size;
+					return error::AddBlockErrorCode::FAILED_POISSON_CHECK;
+				}
+			}
+
+
           size_t endpointIndex =
               std::distance(chainsLeaves.begin(), std::find(chainsLeaves.begin(), chainsLeaves.end(), cache));
           assert(endpointIndex != chainsStorage.size());

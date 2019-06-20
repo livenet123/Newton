@@ -83,8 +83,10 @@ bool Currency::init() {
   if (isTestnet()) {
 	  m_upgradeHeightV2 = 3;
 	  m_zawyLWMA2DifficultyBlockIndex = 3;
+	  m_zawyLWMA3DifficultyBlockIndex = 6;
 	  m_governancePercent = 20;
-	  m_governanceHeight = 10;
+	  m_governanceHeightStart = 10;
+	  m_governanceHeightEnd = 20;
     m_upgradeHeightV3 = 4294967294; //(static_cast<uint32_t>(-1) - 1);
     m_blocksFileName = "testnet_" + m_blocksFileName;
     m_blockIndexesFileName = "testnet_" + m_blockIndexesFileName;
@@ -223,7 +225,14 @@ size_t Currency::maxBlockCumulativeSize(uint64_t height) const {
 }
 
 bool Currency::isGovernanceEnabled(uint32_t height) const {
-	return height >= m_governanceHeight;
+
+	if (height >= m_governanceHeightStart && height <= m_governanceHeightEnd) {
+		return true;
+	}
+	else
+	{
+		return false;
+	}
 }
 
 // governance reward is 20 % of block reward
@@ -592,7 +601,7 @@ Difficulty Currency::nextDifficulty(std::vector<uint64_t> timestamps, std::vecto
 
 Difficulty Currency::getNextDifficulty(uint8_t version, uint32_t blockIndex, std::vector<uint64_t> timestamps, std::vector<Difficulty> cumulativeDifficulties) const {
 
-	if (blockIndex >= m_zawyLWMA2DifficultyBlockIndex)
+    if (blockIndex >= m_zawyLWMA2DifficultyBlockIndex)
 	{
 		return nextDifficultyV2(version, blockIndex, timestamps, cumulativeDifficulties);
 	}
@@ -603,54 +612,72 @@ Difficulty Currency::getNextDifficulty(uint8_t version, uint32_t blockIndex, std
 }
 
 Difficulty Currency::nextDifficultyV2(uint8_t version, uint32_t blockIndex, std::vector<uint64_t> timestamps,
-std::vector<Difficulty> cumulativeDifficulties) const {
+	std::vector<Difficulty> cumulativeDifficulties) const {
 
-// LWMA-2 difficulty algorithm
-// Copyright (c) 2017-2018 Zawy, MIT License
-// https://github.com/zawy12/difficulty-algorithms/issues/3
+	// LWMA-2 / LWMA-3 difficulty algorithm 
+	// Copyright (c) 2017-2018 Zawy, MIT License
+	// https://github.com/zawy12/difficulty-algorithms/issues/3
+	// with modifications by Ryo Currency developers
 
-	int64_t T    = static_cast<int64_t>(m_difficultyTarget); // DIFFICULTY_TARGET = 120	sec
-	int64_t N    = static_cast<int64_t>(m_zawyLWMA2DifficultyN); // DIFFICULTY_WINDOW_V2 = 60
-	int64_t FTL  = static_cast<int64_t>(m_blockFutureTimeLimitV2); // (3 * DIFFICULTY_TARGET)= 360 sec
-        int64_t LWMA(0), solveTime(0), sum_3_ST(0);
-        Difficulty next_D, prev_D;
+	int64_t T = static_cast<int64_t>(m_difficultyTarget); // DIFFICULTY_TARGET = 120	sec
+	int64_t N = static_cast<int64_t>(m_zawyLWMA2DifficultyN); // DIFFICULTY_WINDOW_V2 = 60
+	int64_t FTL = static_cast<int64_t>(m_blockFutureTimeLimitV2); // (3 * DIFFICULTY_TARGET)= 360 sec
+	int64_t LWMA(0), solveTime(0), sum_3_ST(0);
+	Difficulty next_D, prev_D;
 
-	 if (timestamps.size() > N + 1) {
-		   timestamps.resize(N + 1);
-		    cumulativeDifficulties.resize(N + 1);
+	if (timestamps.size() > N + 1) {
+		timestamps.resize(N + 1);
+		cumulativeDifficulties.resize(N + 1);
+	}
+
+	size_t n = timestamps.size();
+	assert(n == cumulativeDifficulties.size());
+	assert(n <= N);
+	if (n <= 1)
+		return 1;
+
+	uint64_t initial_difficulty_guess = 1000;
+	if (timestamps.size() <= static_cast<uint64_t>(N)) {
+		return initial_difficulty_guess;
+	}
+
+	int64_t max_TS, prev_max_TS;
+	prev_max_TS = timestamps[0];
+	uint32_t LWMA3_BLOCK_INDEX = m_zawyLWMA3DifficultyBlockIndex;
+
+	// Loop through N most recent blocks.
+	for (int64_t i = 1; i <= N; i++) {
+		if (blockIndex < LWMA3_BLOCK_INDEX) { // LWMA-2
+			solveTime = std::max(-FTL, std::min(static_cast<int64_t>(timestamps[i]) - static_cast<int64_t>(timestamps[i - 1]), 6 * T));
+		}
+		else { // LWMA-3
+			if (static_cast<int64_t>(timestamps[i]) > prev_max_TS) {
+				max_TS = timestamps[i];
+			}
+			else {
+				max_TS = prev_max_TS + 1;
+			}
+			solveTime = std::min(6 * T, max_TS - prev_max_TS);
+			prev_max_TS = max_TS;
 		}
 
-		   size_t n = timestamps.size();
-		   assert(n == cumulativeDifficulties.size());
-		   assert(n <= N);
-		    if (n <= 1)
-		      return 1;
-
-		    uint64_t initial_difficulty_guess = 1000;
-		    if (timestamps.size() <= static_cast<uint64_t>(N)) {
-		     return initial_difficulty_guess;
-	      }
-
-            // Loop through N most recent blocks.
-            for (int64_t i = 1; i <= N; i++) {
-                    solveTime = std::max(-FTL, std::min( static_cast<int64_t>(timestamps[i]) - static_cast<int64_t>(timestamps[i - 1]), 6 * T));
-                    LWMA += solveTime * i;
-                if ( i > N - 3 ) { sum_3_ST += solveTime; }
-              }
+		LWMA += solveTime * i;
+		if (i > N - 3) { sum_3_ST += solveTime; }
 
 		next_D = (static_cast<int64_t>(cumulativeDifficulties[N] - cumulativeDifficulties[0]) * T * (N + 1) * 99) / (100 * 2 * LWMA);
-                prev_D = cumulativeDifficulties[N] - cumulativeDifficulties[N - 1];
+		prev_D = cumulativeDifficulties[N] - cumulativeDifficulties[N - 1];
 
 		// Make sure we don't divide by zero if 50x attacker
-		next_D = std::max((prev_D * 75)/100, std::min(next_D, (prev_D * 133)/100));
+		next_D = std::max((prev_D * 75) / 100, std::min(next_D, (prev_D * 133) / 100));
 
-                if ( sum_3_ST < (8 * T)/10) {
-                     next_D = (prev_D * 110)/100;
-                }
+		if (sum_3_ST < (8 * T) / 10) {
+			next_D = (prev_D * 110) / 100;
+		}
 
 
-	    return static_cast<uint64_t>(next_D);
-    }
+		return static_cast<uint64_t>(next_D);
+	}
+}
 
 
 Difficulty Currency::nextDifficultyDefault(uint8_t version, uint32_t blockIndex, std::vector<uint64_t> timestamps, std::vector<Difficulty> cumulativeDifficulties) const {
@@ -828,7 +855,8 @@ m_zawyLWMA2DifficultyBlockIndex(currency.m_zawyLWMA2DifficultyBlockIndex),
 m_zawyLWMA2DifficultyN(currency.m_zawyLWMA2DifficultyN),
 
 m_governancePercent(currency.m_governancePercent),
-m_governanceHeight(currency.m_governanceHeight),
+m_governanceHeightStart(currency.m_governanceHeightStart),
+m_governanceHeightEnd(currency.m_governanceHeightEnd),
 
 m_testnet(currency.m_testnet),
 genesisBlockTemplate(std::move(currency.genesisBlockTemplate)),
@@ -855,10 +883,12 @@ CurrencyBuilder::CurrencyBuilder(Logging::ILogger& log) : m_currency(log) {
   cryptonoteCoinVersion(parameters::CRYPTONOTE_COIN_VERSION);
 
   zawyLWMA2DifficultyBlockIndex(parameters::ZAWY_LWMA2_DIFFICULTY_BLOCK_INDEX);
+  zawyLWMA3DifficultyBlockIndex(parameters::ZAWY_LWMA3_DIFFICULTY_BLOCK_INDEX);
   zawyLWMA2DifficultyN(parameters::ZAWY_LWMA2_DIFFICULTY_N);
 
   governancePercent(parameters::GOVERNANCE_PERCENT);
-  governanceHeight(parameters::GOVERNANCE_HEIGHT);
+  governanceHeightStart(parameters::GOVERNANCE_HEIGHT_START);
+  governanceHeightEnd(parameters::GOVERNANCE_HEIGHT_END);
 
   rewardBlocksWindow(parameters::CRYPTONOTE_REWARD_BLOCKS_WINDOW);
   blockGrantedFullRewardZone(parameters::CRYPTONOTE_BLOCK_GRANTED_FULL_REWARD_ZONE);

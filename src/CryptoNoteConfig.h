@@ -44,12 +44,14 @@ const uint64_t MONEY_SUPPLY                                  = ((uint64_t)(-1));
 const size_t   CRYPTONOTE_COIN_VERSION                       = 1;
 
 const uint32_t ZAWY_LWMA2_DIFFICULTY_BLOCK_INDEX             = 145000;
+const uint32_t ZAWY_LWMA3_DIFFICULTY_BLOCK_INDEX             = 941000;
 const size_t   DIFFICULTY_WINDOW_V2                          = 60;
 const size_t   ZAWY_LWMA2_DIFFICULTY_N                 		   = DIFFICULTY_WINDOW_V2;
 const uint64_t DIFFICULTY_BLOCKS_COUNT_V2                    = DIFFICULTY_WINDOW_V2 + 1;
 
 const uint16_t GOVERNANCE_PERCENT                             = 20;  // 20 percent of block reward
-const uint32_t GOVERNANCE_HEIGHT                              = 196000;
+const uint32_t GOVERNANCE_HEIGHT_START                        = 196000;
+const uint32_t GOVERNANCE_HEIGHT_END                          = 941000;
 
 const unsigned EMISSION_SPEED_FACTOR                         = 18;
 static_assert(EMISSION_SPEED_FACTOR <= 8 * sizeof(uint64_t), "Bad EMISSION_SPEED_FACTOR");
@@ -76,6 +78,10 @@ const size_t   DIFFICULTY_LAG                                = 0;  // !!!
 const size_t   DIFFICULTY_LAG_V1                             = 15;
 const size_t   DIFFICULTY_LAG_V2                             = 15;
 static_assert(2 * DIFFICULTY_CUT <= DIFFICULTY_WINDOW - 2, "Bad DIFFICULTY_WINDOW or DIFFICULTY_CUT");
+
+const uint64_t POISSON_CHECK_TRIGGER						 = 10; // Reorg size that triggers poisson timestamp check
+const uint64_t POISSON_CHECK_DEPTH							 = 60;   // Main-chain depth of the poisson check. The attacker will have to tamper 50% of those blocks
+const double   POISSON_LOG_P_REJECT							 = -75.0; // Reject reorg if the probablity that the timestamps are genuine is below e^x, -75 = 10^-33
 
 const size_t   MAX_BLOCK_SIZE_INITIAL                        = 500 * 1024;
 const uint64_t MAX_BLOCK_SIZE_GROWTH_SPEED_NUMERATOR         = 100 * 1024;
@@ -123,8 +129,8 @@ const size_t   BLOCKS_IDS_SYNCHRONIZING_DEFAULT_COUNT        =  10000;  //by def
 const size_t   BLOCKS_SYNCHRONIZING_DEFAULT_COUNT            =  128;    //by default, blocks count in blocks downloading
 const size_t   COMMAND_RPC_GET_BLOCKS_FAST_MAX_COUNT         =  1000;
 
-const int      P2P_DEFAULT_PORT                              =  20236;
-const int      RPC_DEFAULT_PORT                              =  21236;
+const int      P2P_DEFAULT_PORT								               = 30236;
+const int      RPC_DEFAULT_PORT                              = 31236;
 
 const size_t   P2P_LOCAL_WHITE_PEERLIST_LIMIT                =  1000;
 const size_t   P2P_LOCAL_GRAY_PEERLIST_LIMIT                 =  5000;
@@ -139,15 +145,14 @@ const uint32_t P2P_DEFAULT_CONNECTION_TIMEOUT                = 5000;          //
 const uint32_t P2P_DEFAULT_PING_CONNECTION_TIMEOUT           = 2000;          // 2 seconds
 const uint64_t P2P_DEFAULT_INVOKE_TIMEOUT                    = 60 * 2 * 1000; // 2 minutes
 const size_t   P2P_DEFAULT_HANDSHAKE_INVOKE_TIMEOUT          = 5000;          // 5 seconds
-const char     P2P_STAT_TRUSTED_PUB_KEY[]                    = "8f80f9a5a434a9f1510d13336228debfee9c918ce505efe225d8c94d045fa115";
+const char     P2P_STAT_TRUSTED_PUB_KEY[]                    = "";
 
 const char* const SEED_NODES[] = {
 
-  "185.198.58.13:20236",
-  "185.198.58.31:20236",
-	"185.45.192.241:20236",
-	"185.45.192.15:20236",
-	"192.64.116.142:20236"
+  "185.198.58.13:30236",
+  "185.198.58.31:30236",
+	"185.45.192.241:30236",
+	"185.45.192.15:30236"
 
  };
 
@@ -212,7 +217,45 @@ const std::initializer_list<CheckpointData> CHECKPOINTS = {
 	{172000, "02172bb159f7760b2aae1698a730bfb01525b2e952d96c3e2223966869a41e66"},
 	{176000, "141c4ab276c7fc66a6d4fd79c9cf8948b2f9f4b44719b5da2b04b70dcfb1ed8f"},
 	{180000, "29589d17e10de9488c44f6a87b7965c32d85f7c250c4e02fb211480dd9b3bff0"},
-	{184000, "53fb8da65f4e8b9591382cd81d3034a3e755b878a8f21a3d4c7ee5f05665e2df"}
+	{184000, "53fb8da65f4e8b9591382cd81d3034a3e755b878a8f21a3d4c7ee5f05665e2df"},
+  {188000, "321fe8c8f44b53dc9ebefe8c5cfebd6cec96f3c6d87c47f78f9dd581d2232ef6"},
+  {192000, "1fdbab5e54988c4a52543b59d0fd97794c40b761408837521c40727b13fa0067"},
+  {196000, "f0646c7f4c7a62dc0abc3df3ec2b10501685058aade348f3d3f03e53e71a1761"},
+  {200000, "0ab8beff6dd33585dab367aca4012b79e6222399e260a803a828febac7b0f452"},
+  {204000, "7a23a71036262f3e0a227f0c1ca08beadfb5833b17045b850948ac7e505b7885"},
+  {208000, "548e608371fcc1ae8a0fe8e9f3854f69e02f13f568c44169c82eee30cbe0929c"},
+	{212000, "bd7593f657edeb1a6ff1cefedb3ffecab82c5d3e6cb50d1cb1cd5b508032c721"},
+	{216000, "ffec1a59e354c430ec43ac7e179a0e887add184b96d47cf734de028f2573878d"},
+	{220000, "f594c1642531430b91391d0695c09252ecc25c499378070a2127e10ea72f8820"},
+	{224000, "075b31a89f9c4e8f2ef03522e8a52d4803685e01d2afc08919d179fc40c45ab8"},
+	{228000, "d16008f616ccd035b630294f3bd75ac92f76cddada86925a01bb9e9044d0124b"},
+	{232000, "4a792ca56385cbaf6d5c87eefbb47781d4fa0fb2b28b1e9a1faae3f7b4fd8a72"},
+	{236000, "35cefc162199de285efe8f532e7d3a131847ba528726f8b63d4fffd6f7d7cc61"},
+	{240000, "9008ef78f122f79cee5214f525dcd09e1999a283018033eaec33ff47d8d7553c"},
+	{244000, "3006c8dee29ef6df2bc3a6cabef428321bc55cbee2570e488f94c1ec38cad240"},
+	{248000, "8fe4b2bdbca58f942c18bb4cd279db494ff6fad1cf54bd072edcedc57ccb7d91"},
+	{252000, "0c5d560095a69e55eefc8d2d16b2c75561cee71cdeda353645c4e3d11ccbc991"},
+	{256000, "e5c6e5ff16883996b9fdff7928ad4e9b9e9d58adce5530eef29181d39e966ec1"},
+	{260000, "7f6cef4389adebb496defe66e9eee509fbdfdcb8489240e35fc4169a0fee70ff"},
+	{264000, "32e56053a97e25ebf939ddfeb78c22e039b0b03433aa5888873c6dbd3ed6ed56"},
+	{268000, "2124d9918d5336a654b2392a6d31e738a5dba39100b90f509bcadd1a1fee8c90"},
+	{272000, "8a4cd7ba454a175325bdea0abfff81bb61be230319f531d26b42799a8bba942b"},
+	{276000, "60df2c6dd69583243f0e9fc37405e17b389e2114963017e88e9a98d47fa05f8f"},
+	{280000, "56848aba4061f8b17ba752617ca14fe6ed0e4d440132e3a94f469ad91d7c6f5c"},
+	{284000, "e1e315f79f3e50dad4565bf1b9e7b8ecb0fa42b043fe1de6e48569ce363fb209"},
+	{288000, "7cce7f93442e2ee447d1c4398776e745e8eae12dcfdfb96f4df13823227e9880"},
+	{292000, "0ddb52388234002246c6ab45675268ba7c4f0955bf6f6e2a2406f4a25e3fc187"},
+	{296000, "5ef57607f95f185da7cb695eac6f253995704e1805e6c6588fa9745f1066ce1d"},
+	{300000, "7c13fe58ee1e862f28a8e127670b7b834c2689e4dbd798efad4a9d05f9f1cdee"},
+	{375000, "4b193fd43754355e27ea232309ec1566da96d793ff91e110d6cce7dff064fdf4"},
+	{450000, "d268b8467a429ba3ef9f65cedfe0d73fbc29b68efb57a9cabd45845a2e81c823"},
+	{525000, "3039d0a1b63d284588d38ac55f303f553791090815cae89b653e316b6bb6ae98"},
+	{600000, "9c5a0f6e78c18c07d02ee9055dac394a95a06bac45399c036b61a0f5a7e45010"},
+	{675000, "4b8e2475e49b32871e7fe22356dc2588be1be23cddb23178139c1e28fbfe3578"},
+	{750000, "c387364a1b0e85a4f494568e140af5627fe4cd17bfd60d15f9b17abdce358547"},
+	{825000, "6e037e44a69be0cf57f9600861ef1cb5119b898b079a2865c222727c2bb427d3"},
+	{900000, "ec5467538185b89ba2c6334ec1dffdd655f18120aad727bc0aaa7833b1177106"},
+	{934145, "4a238d5bb901f7362eaa422743e31623b96c3c8bd85bb8c95ad5f858f8950588"}
 
  };
 

@@ -29,7 +29,9 @@ enum class AddBlockErrorCode {
   ADDED_TO_ALTERNATIVE_AND_SWITCHED,
   ALREADY_EXISTS,
   REJECTED_AS_ORPHANED,
-  DESERIALIZATION_FAILED
+  DESERIALIZATION_FAILED,
+  FAILED_FTL_CHECK,
+  FAILED_POISSON_CHECK
 };
 
 // custom category:
@@ -55,6 +57,8 @@ public:
       case AddBlockErrorCode::ALREADY_EXISTS: return "Block already exists";
       case AddBlockErrorCode::REJECTED_AS_ORPHANED: return "Block rejected as orphaned";
       case AddBlockErrorCode::DESERIALIZATION_FAILED: return "Deserialization error";
+	    case AddBlockErrorCode::FAILED_FTL_CHECK: return "Failed FTL check";
+	    case AddBlockErrorCode::FAILED_POISSON_CHECK: return "Failed Poisson check";
       default: return "Unknown error";
     }
   }

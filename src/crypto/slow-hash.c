@@ -18,6 +18,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
+#include "Common/int-util.h"
 
 #include <emmintrin.h>
 #include <wmmintrin.h>
@@ -30,7 +31,7 @@
 
 #include "aesb.h"
 #include "initializer.h"
-#include "Common/int-util.h"
+
 #include "hash-ops.h"
 #include "oaes_lib.h"
 
