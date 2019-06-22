@@ -671,11 +671,11 @@ Difficulty Currency::nextDifficultyV2(uint8_t version, uint32_t blockIndex, std:
 		next_D = std::max((prev_D * 75) / 100, std::min(next_D, (prev_D * 133) / 100));
 
 		if (sum_3_ST < (8 * T) / 10) {
-			next_D = (prev_D * 110) / 100;
-		
-
-		return static_cast<uint64_t>(next_D);
-	}
+			next_D = (prev_D * 110) / 100;		
+		}
+	
+	
+		return static_cast<uint64_t>(next_D);	
 }
 
 
