@@ -663,7 +663,7 @@ Difficulty Currency::nextDifficultyV2(uint8_t version, uint32_t blockIndex, std:
 
 		LWMA += solveTime * i;
 		if (i > N - 3) { sum_3_ST += solveTime; }
-
+                }
 		next_D = (static_cast<int64_t>(cumulativeDifficulties[N] - cumulativeDifficulties[0]) * T * (N + 1) * 99) / (100 * 2 * LWMA);
 		prev_D = cumulativeDifficulties[N] - cumulativeDifficulties[N - 1];
 
@@ -672,8 +672,7 @@ Difficulty Currency::nextDifficultyV2(uint8_t version, uint32_t blockIndex, std:
 
 		if (sum_3_ST < (8 * T) / 10) {
 			next_D = (prev_D * 110) / 100;
-		}
-
+		
 
 		return static_cast<uint64_t>(next_D);
 	}
