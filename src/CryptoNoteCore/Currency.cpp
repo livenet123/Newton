@@ -851,6 +851,7 @@ m_txPoolFileName(currency.m_txPoolFileName),
 m_cryptonoteCoinVersion(currency.m_cryptonoteCoinVersion),
 
 m_zawyLWMA2DifficultyBlockIndex(currency.m_zawyLWMA2DifficultyBlockIndex),
+m_zawyLWMA3DifficultyBlockIndex(currency.m_zawyLWMA3DifficultyBlockIndex),
 m_zawyLWMA2DifficultyN(currency.m_zawyLWMA2DifficultyN),
 
 m_governancePercent(currency.m_governancePercent),
