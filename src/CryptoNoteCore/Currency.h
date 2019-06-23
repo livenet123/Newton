@@ -76,6 +76,7 @@ public:
   size_t cryptonoteCoinVersion() const { return m_cryptonoteCoinVersion; }
 
   uint32_t zawyLWMA2DifficultyBlockIndex() const { return m_zawyLWMA2DifficultyBlockIndex; }
+  uint32_t zawyLWMA3DifficultyBlockIndex() const { return m_zawyLWMA3DifficultyBlockIndex; }
   size_t zawyLWMA2DifficultyN() const { return m_zawyLWMA2DifficultyN; }
 
   uint32_t governancePercent() const { return m_governancePercent; }
