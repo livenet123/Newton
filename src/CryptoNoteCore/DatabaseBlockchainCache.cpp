@@ -1484,6 +1484,11 @@ std::vector<Crypto::Hash> DatabaseBlockchainCache::getTransactionHashes() const 
   assert(false);
   return {};
 }
+  
+std::vector<Crypto::Hash> DatabaseBlockchainCache::getTransactionHashes(uint32_t startIndex, uint32_t endIndex) const {
+	assert(false);
+	return {};
+}
 
 std::vector<uint32_t> DatabaseBlockchainCache::getRandomOutsByAmount(uint64_t amount, size_t count,
                                                                      uint32_t blockIndex) const {
