@@ -564,7 +564,16 @@ std::error_code Core::addBlock(const CachedBlock& cachedBlock, RawBlock&& rawBlo
   TransactionValidatorState validatorState;
 
   auto previousBlockIndex = cache->getBlockIndex(previousBlockHash);
+  auto mainChainCache = chainsLeaves[0];
 
+  auto currentBlockchainHeight = mainChainCache->getTopBlockIndex();
+  if (!checkpoints.isAlternativeBlockAllowed(currentBlockchainHeight, previousBlockIndex + 1)) {
+    logger(Logging::DEBUGGING) << "Block " << cachedBlock.getBlockHash() << std::endl <<
+    " can't be accepted for alternative chain: block height " << previousBlockIndex + 1 << std::endl <<
+    " is too deep below blockchain height " << currentBlockchainHeight;
+    return error::AddBlockErrorCode::REJECTED_AS_ORPHANED;
+  }
+	
   bool addOnTop = cache->getTopBlockIndex() == previousBlockIndex;
   auto maxBlockCumulativeSize = currency.maxBlockCumulativeSize(previousBlockIndex + 1);
   if (cumulativeBlockSize > maxBlockCumulativeSize) {
@@ -649,100 +658,107 @@ std::error_code Core::addBlock(const CachedBlock& cachedBlock, RawBlock&& rawBlo
 
         notifyObservers(makeDelTransactionMessage(std::move(hashes), Messages::DeleteTransaction::Reason::InBlock));
       } else {
+		  bool allowReorg = true;
+		  cache->pushBlock(cachedBlock, transactions, validatorState, cumulativeBlockSize, emissionChange, currentDifficulty, std::move(rawBlock));
+		  logger(Logging::WARNING) << "Block " << cachedBlock.getBlockHash() << " added to alternative chain. Index: " << (previousBlockIndex + 1);
 
-        cache->pushBlock(cachedBlock, transactions, validatorState, cumulativeBlockSize, emissionChange, currentDifficulty, std::move(rawBlock));
-        logger(Logging::WARNING) << "Block " << cachedBlock.getBlockHash() << " added to alternative chain. Index: " << (previousBlockIndex + 1);
+		  if (cache->getCurrentCumulativeDifficulty() > mainChainCache->getCurrentCumulativeDifficulty()) {
+			  int64_t reorgSize = cache->getTopBlockIndex() - cache->getStartBlockIndex() + 1;
 
-        auto mainChainCache = chainsLeaves[0];
-        if (cache->getCurrentCumulativeDifficulty() > mainChainCache->getCurrentCumulativeDifficulty()) {
-			
-			// Poisson check, courtesy of ryo-project
-			// https://github.com/ryo-currency/ryo-writeups/blob/master/poisson-writeup.md
-			// For longer reorgs, check if the timestamps are probable - if they aren't the diff algo has failed
-			// This check is meant to detect an offline bypass of timestamp < time() + ftl check
-			// It doesn't need to be very strict as it synergises with the median check
-			const std::vector<BlockTemplate> alt_chain = getAlternativeBlocks();
-			uint64_t alt_chain_size = getAlternativeBlockCount();
-			if (alt_chain_size >= CryptoNote::parameters::POISSON_CHECK_TRIGGER)
-			{									
-				uint64_t high_timestamp = alt_chain.back().timestamp;
-				Crypto::Hash low_block = alt_chain.front().previousBlockHash;
-				
-				//Make sure that the high_timestamp is really highest
-				for (size_t index = 0; index < alt_chain.size(); ++index)
-				{			
-				if (high_timestamp < alt_chain[index].timestamp)
-				high_timestamp = alt_chain[index].timestamp;
-				}
+			  // Transactions comparison check
+			  // https://medium.com/@karbo.org/prevent-transaction-cancellation-in-51-attack-79ba03d191f0
+			  // Compare transactions in proposed alt chain vs current main chain
+			  // and reject if some transaction is missing in the alt chain
+			  logger(Logging::WARNING) << "Transactions comparison check triggered by reorg size " << reorgSize;
+			  std::vector<Crypto::Hash> mainChainTxHashes = mainChainCache->getTransactionHashes(cache->getStartBlockIndex(), cache->getTopBlockIndex());
+			  for (const auto& mainChainTxHash : mainChainTxHashes) {
+				  if (!cache->hasTransaction(mainChainTxHash)) {
+					  logger(Logging::ERROR) << "Attempting to switch to an alternate chain, but it lacks transaction "
+						  << Common::podToHex(mainChainTxHash)
+						  << " from main chain, rejected";
+					  allowReorg = false;
+				  }
+			  }
+			  mainChainTxHashes.clear();
+			  mainChainTxHashes.shrink_to_fit();
 
-				uint64_t block_ftl = CryptoNote::parameters::CRYPTONOTE_BLOCK_FUTURE_TIME_LIMIT_V2;
-				// This would fail later anyway
-				if (high_timestamp > getAdjustedTime() + block_ftl)
-				{
-					logger(Logging::ERROR) << "Attempting to move to an alternate chain, but it failed FTL check! Timestamp: " << high_timestamp << ", limit: " << getAdjustedTime() + block_ftl;					
-					return error::AddBlockErrorCode::FAILED_FTL_CHECK;
-				}
+			  // Poisson check, courtesy of Ryo Project and fireice_uk for this version
+			  // https://github.com/ryo-currency/ryo-writeups/blob/master/poisson-writeup.md
+			  // For longer reorgs, check if the timestamps are probable - if they aren't the diff algo has failed
+			  // This check is meant to detect an offline bypass of timestamp < time() + ftl check
+			  // It doesn't need to be very strict as it synergises with the median check
+			  if (reorgSize >= CryptoNote::parameters::POISSON_CHECK_TRIGGER)
+			  {
+				  std::vector<uint64_t> alt_chain = cache->getLastTimestamps(reorgSize);
+				  std::vector<uint64_t> main_chain = mainChainCache->getLastTimestamps(CryptoNote::parameters::POISSON_CHECK_DEPTH, cache->getStartBlockIndex() - 1, UseGenesis{ false });
 
-				logger(Logging::WARNING) << "Poisson check triggered by reorg size of " << alt_chain_size;
+				  logger(Logging::WARNING) << "Poisson check triggered by reorg size " << reorgSize;
+				  //for(size_t i=0; i < alt_chain.size(); i++)
+				  //  logger(Logging::WARNING) << "DEBUG: alt_chain [" << i << "] " << alt_chain[i];
+				  //for(size_t i=0; i < main_chain.size(); i++)
+				  //  logger(Logging::WARNING) << "DEBUG: main_chain [" << i << "] " << main_chain[i];
 
-				uint64_t failed_checks = 0, i = 1;
-				for (; i <= CryptoNote::parameters::POISSON_CHECK_DEPTH; i++)
-				{
-					// This means we reached the genesis block
-					if (low_block == NULL_HASH)
-						break;
+				  uint64_t high_timestamp = alt_chain.back();
+				  std::reverse(main_chain.begin(), main_chain.end());
 
-					BlockTemplate blk;
-					blk = getBlockByHash(low_block);
+				  uint64_t failed_checks = 0, i = 0;
+				  for (; i < CryptoNote::parameters::POISSON_CHECK_DEPTH; i++)
+				  {
+					  uint64_t low_timestamp = main_chain[i];
 
-					uint64_t low_timestamp = blk.timestamp;
-					low_block = blk.previousBlockHash;
+					  if (low_timestamp >= high_timestamp)
+					  {
+						  logger(Logging::WARNING) << "Skipping check at depth " << i << " due to tampered timestamp on main chain.";
+						  failed_checks++;
+						  continue;
+					  }
 
-					if (low_timestamp >= high_timestamp)
-					{
-						logger(Logging::INFO) << "Skipping check at depth " << i << " due to tampered timestamp on main chain.";
-						failed_checks++;
-						continue;
-					}
+					  double lam = double(high_timestamp - low_timestamp) / double(CryptoNote::parameters::DIFFICULTY_TARGET);
+					  if (calc_poisson_ln(lam, reorgSize + i + 1) < CryptoNote::parameters::POISSON_LOG_P_REJECT)
+					  {
+						  logger(Logging::WARNING) << "Poisson check at depth " << i << " failed! delta_t: " << (high_timestamp - low_timestamp) << " size: " << reorgSize + i + 1;
+						  failed_checks++;
+					  }
+					  //else
+					  //  logger(Logging::WARNING) << "Poisson check at depth " << i << " passed! delta_t: " << (high_timestamp - low_timestamp) << " size: " << reorgSize + i + 1;
+				  }
 
-					double lam = double(high_timestamp - low_timestamp) / double(CryptoNote::parameters::DIFFICULTY_TARGET);
-					if (calc_poisson_ln(lam, alt_chain_size + i) < CryptoNote::parameters::POISSON_LOG_P_REJECT)
-					{
-						logger(Logging::INFO) << "Poisson check at depth " << i << " failed! delta_t: " << (high_timestamp - low_timestamp) << " size: " << alt_chain_size + i;
-						failed_checks++;
-					}
-				}
+				  logger(Logging::INFO) << "Poisson check result " << failed_checks << " fails out of " << i;
 
-				i--; //Convert to number of checks
-				logger(Logging::INFO) << "Poisson check result " << failed_checks << " fails out of " << i;
+				  if (failed_checks > i / 2)
+				  {
+					  logger(Logging::WARNING) << "Attempting to move to an alternate chain, but it failed Poisson check! " << failed_checks << " fails out of " << i << " alt_chain_size: " << reorgSize;
+					  allowReorg = false;
+				  }
+				  alt_chain.clear();
+				  alt_chain.shrink_to_fit();
+				  main_chain.clear();
+				  main_chain.shrink_to_fit();
+			  }
 
-				if (failed_checks > i / 2)
-				{
-					logger(Logging::ERROR) << "Attempting to move to an alternate chain, but it failed Poisson check! " << failed_checks << " fails out of " << i << " alt_chain_size: " << alt_chain_size;
-					return error::AddBlockErrorCode::FAILED_POISSON_CHECK;
-				}
-			}
+			  if (allowReorg)
+			  {
+				  size_t endpointIndex =
+					  std::distance(chainsLeaves.begin(), std::find(chainsLeaves.begin(), chainsLeaves.end(), cache));
+				  assert(endpointIndex != chainsStorage.size());
+				  assert(endpointIndex != 0);
 
+				  std::swap(chainsLeaves[0], chainsLeaves[endpointIndex]);
+				  updateMainChainSet();
 
-          size_t endpointIndex =
-              std::distance(chainsLeaves.begin(), std::find(chainsLeaves.begin(), chainsLeaves.end(), cache));
-          assert(endpointIndex != chainsStorage.size());
-          assert(endpointIndex != 0);
-          std::swap(chainsLeaves[0], chainsLeaves[endpointIndex]);
-          updateMainChainSet();
+				  updateBlockMedianSize();
+				  actualizePoolTransactions();
+				  copyTransactionsToPool(chainsLeaves[endpointIndex]);
 
-          updateBlockMedianSize();
-          actualizePoolTransactions();
-          copyTransactionsToPool(chainsLeaves[endpointIndex]);
+				  switchMainChainStorage(chainsLeaves[0]->getStartBlockIndex(), *chainsLeaves[0]);
 
-          switchMainChainStorage(chainsLeaves[0]->getStartBlockIndex(), *chainsLeaves[0]);
+				  ret = error::AddBlockErrorCode::ADDED_TO_ALTERNATIVE_AND_SWITCHED;
 
-          ret = error::AddBlockErrorCode::ADDED_TO_ALTERNATIVE_AND_SWITCHED;
-
-          logger(Logging::INFO) << "Switching to alternative chain! New top block hash: " << cachedBlock.getBlockHash() << ", index: " << (previousBlockIndex + 1)
-                                << ", previous top block hash: " << chainsLeaves[endpointIndex]->getTopBlockHash() << ", index: " << chainsLeaves[endpointIndex]->getTopBlockIndex();
-        }
-      }
+				  logger(Logging::WARNING) << "Switching to alternative chain! New top block hash: " << cachedBlock.getBlockHash() << ", index: " << (previousBlockIndex + 1)
+					  << ", previous top block hash: " << chainsLeaves[endpointIndex]->getTopBlockHash() << ", index: " << chainsLeaves[endpointIndex]->getTopBlockIndex();
+			  }
+		  }
+	  }
     } else {
       //add block on top of segment which is not leaf! the case when we got more than one alternative block on the same height
       auto newCache = blockchainCacheFactory->createBlockchainCache(currency, cache, previousBlockIndex + 1);
