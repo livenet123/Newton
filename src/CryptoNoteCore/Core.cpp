@@ -566,13 +566,13 @@ std::error_code Core::addBlock(const CachedBlock& cachedBlock, RawBlock&& rawBlo
   auto previousBlockIndex = cache->getBlockIndex(previousBlockHash);
   auto mainChainCache = chainsLeaves[0];
 
-  auto currentBlockchainHeight = mainChainCache->getTopBlockIndex();
-  if (!checkpoints.isAlternativeBlockAllowed(currentBlockchainHeight, previousBlockIndex + 1)) {
-    logger(Logging::DEBUGGING) << "Block " << cachedBlock.getBlockHash() << std::endl <<
-    " can't be accepted for alternative chain: block height " << previousBlockIndex + 1 << std::endl <<
-    " is too deep below blockchain height " << currentBlockchainHeight;
-    return error::AddBlockErrorCode::REJECTED_AS_ORPHANED;
-  }
+  //auto currentBlockchainHeight = mainChainCache->getTopBlockIndex();
+  //if (!checkpoints.isAlternativeBlockAllowed(currentBlockchainHeight, previousBlockIndex + 1)) {
+    //logger(Logging::DEBUGGING) << "Block " << cachedBlock.getBlockHash() << std::endl <<
+    //" can't be accepted for alternative chain: block height " << previousBlockIndex + 1 << std::endl <<
+    //" is too deep below blockchain height " << currentBlockchainHeight;
+    //return error::AddBlockErrorCode::REJECTED_AS_ORPHANED;
+  //}
 	
   bool addOnTop = cache->getTopBlockIndex() == previousBlockIndex;
   auto maxBlockCumulativeSize = currency.maxBlockCumulativeSize(previousBlockIndex + 1);
