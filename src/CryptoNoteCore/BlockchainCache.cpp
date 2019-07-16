@@ -354,6 +354,21 @@ std::vector<Crypto::Hash> BlockchainCache::getTransactionHashes() const {
   return hashes;
 }
 
+std::vector<Crypto::Hash> BlockchainCache::getTransactionHashes(uint32_t startIndex, uint32_t endIndex) const {
+	auto& txInfos = transactions.get<TransactionHashTag>();
+	std::vector<Crypto::Hash> hashes;
+	for (auto& tx : txInfos) {
+		// skip transactions not in range
+		if (tx.blockIndex < startIndex || tx.blockIndex > endIndex)
+			continue;
+		// skip base transaction
+		if (tx.transactionIndex != 0) {
+			hashes.push_back(tx.transactionHash);
+		}
+	}
+	return hashes;
+}
+  
 void BlockchainCache::pushTransaction(const CachedTransaction& cachedTransaction, uint32_t blockIndex,
                                       uint16_t transactionInBlockIndex) {
   logger(Logging::DEBUGGING) << "Adding transaction " << cachedTransaction.getTransactionHash() << " at block " << blockIndex << ", index in block " << transactionInBlockIndex;
