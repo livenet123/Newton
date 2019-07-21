@@ -90,12 +90,12 @@ JsonValue buildLoggerConfiguration(Level level, const std::string& logfile) {
   loggerConfiguration.insert("globalLevel", static_cast<int64_t>(level));
 
   JsonValue& cfgLoggers = loggerConfiguration.insert("loggers", JsonValue::ARRAY);
-
+/*
   JsonValue& fileLogger = cfgLoggers.pushBack(JsonValue::OBJECT);
   fileLogger.insert("type", "file");
   fileLogger.insert("filename", logfile);
   fileLogger.insert("level", static_cast<int64_t>(TRACE));
-
+*/
   JsonValue& consoleLogger = cfgLoggers.pushBack(JsonValue::OBJECT);
   consoleLogger.insert("type", "console");
   consoleLogger.insert("level", static_cast<int64_t>(TRACE));
