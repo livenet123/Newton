@@ -1185,8 +1185,10 @@ void WalletGreen::deleteAddress(const std::string& address) {
   m_pendingBalance -= it->pendingBalance;
 
   if (it->actualBalance != 0 || it->pendingBalance != 0) {
-    m_logger(INFO, BRIGHT_WHITE) << "Container balance updated, actual " << m_currency.formatAmount(m_actualBalance) <<
-      ", pending " << m_currency.formatAmount(m_pendingBalance);
+    //m_logger(INFO, BRIGHT_WHITE) << "Container balance updated, actual " << m_currency.formatAmount(m_actualBalance) <<
+      //", pending " << m_currency.formatAmount(m_pendingBalance);
+	std::cout << "Container balance updated, actual " << m_currency.formatAmount(m_actualBalance) <<
+		", pending " << m_currency.formatAmount(m_pendingBalance) << std::endl;
   }
 
   auto addressIndex = std::distance(m_walletsContainer.get<RandomAccessIndex>().begin(), m_walletsContainer.project<RandomAccessIndex>(it));
@@ -1316,12 +1318,18 @@ size_t WalletGreen::transfer(const TransactionParameters& transactionParameters)
 
     if (id != WALLET_INVALID_TRANSACTION_ID) {
       auto& tx = m_transactions[id];
-      m_logger(INFO, BRIGHT_WHITE) << "Transaction created and send, ID " << id <<
+      /*m_logger(INFO, BRIGHT_WHITE) << "Transaction created and send, ID " << id <<
         ", hash " << m_transactions[id].hash <<
         ", state " << tx.state <<
         ", totalAmount " << m_currency.formatAmount(tx.totalAmount) <<
         ", fee " << m_currency.formatAmount(tx.fee) <<
-        ", transfers: " << TransferListFormatter(m_currency, getTransactionTransfersRange(id));
+        ", transfers: " << TransferListFormatter(m_currency, getTransactionTransfersRange(id));*/
+	  std::cout << "Transaction created and send, ID " << id <<
+		  ", hash " << m_transactions[id].hash <<
+		  ", state " << tx.state <<
+		  ", totalAmount " << m_currency.formatAmount(tx.totalAmount) <<
+		  ", fee " << m_currency.formatAmount(tx.fee) <<
+		  ", transfers: " << TransferListFormatter(m_currency, getTransactionTransfersRange(id)) << std::endl;
     }
   });
 
@@ -1331,13 +1339,21 @@ size_t WalletGreen::transfer(const TransactionParameters& transactionParameters)
   throwIfTrackingMode();
   throwIfStopped();
 
-  m_logger(INFO, BRIGHT_WHITE) << "transfer" <<
+  /*m_logger(INFO, BRIGHT_WHITE) << "transfer" <<
     ", from " << Common::makeContainerFormatter(transactionParameters.sourceAddresses) <<
     ", to " << WalletOrderListFormatter(m_currency, transactionParameters.destinations) <<
     ", change address '" << transactionParameters.changeDestination << '\'' <<
     ", fee " << m_currency.formatAmount(transactionParameters.fee) <<
     ", mixin " << transactionParameters.mixIn <<
-    ", unlockTimestamp " << transactionParameters.unlockTimestamp;
+    ", unlockTimestamp " << transactionParameters.unlockTimestamp;*/
+
+  std::cout << "transfer" <<
+	  ", from " << Common::makeContainerFormatter(transactionParameters.sourceAddresses) <<
+	  ", to " << WalletOrderListFormatter(m_currency, transactionParameters.destinations) <<
+	  ", change address '" << transactionParameters.changeDestination << '\'' <<
+	  ", fee " << m_currency.formatAmount(transactionParameters.fee) <<
+	  ", mixin " << transactionParameters.mixIn <<
+	  ", unlockTimestamp " << transactionParameters.unlockTimestamp << std::endl;
 
   id = doTransfer(transactionParameters);
   return id;
@@ -1609,12 +1625,19 @@ size_t WalletGreen::makeTransaction(const TransactionParameters& sendingTransact
 
     if (id != WALLET_INVALID_TRANSACTION_ID) {
       auto& tx = m_transactions[id];
-      m_logger(INFO, BRIGHT_WHITE) << "Delayed transaction created, ID " << id <<
+      /*m_logger(INFO, BRIGHT_WHITE) << "Delayed transaction created, ID " << id <<
         ", hash " << m_transactions[id].hash <<
         ", state " << tx.state <<
         ", totalAmount " << m_currency.formatAmount(tx.totalAmount) <<
         ", fee " << m_currency.formatAmount(tx.fee) <<
-        ", transfers: " << TransferListFormatter(m_currency, getTransactionTransfersRange(id));
+        ", transfers: " << TransferListFormatter(m_currency, getTransactionTransfersRange(id));*/
+
+	  std::cout << "Delayed transaction created, ID " << id <<
+		  ", hash " << m_transactions[id].hash <<
+		  ", state " << tx.state <<
+		  ", totalAmount " << m_currency.formatAmount(tx.totalAmount) <<
+		  ", fee " << m_currency.formatAmount(tx.fee) <<
+		  ", transfers: " << TransferListFormatter(m_currency, getTransactionTransfersRange(id)) << std::endl;
     }
   });
 
@@ -1624,13 +1647,21 @@ size_t WalletGreen::makeTransaction(const TransactionParameters& sendingTransact
   throwIfTrackingMode();
   throwIfStopped();
 
-  m_logger(INFO, BRIGHT_WHITE) << "makeTransaction" <<
+  /*m_logger(INFO, BRIGHT_WHITE) << "makeTransaction" <<
     ", from " << Common::makeContainerFormatter(sendingTransaction.sourceAddresses) <<
     ", to " << WalletOrderListFormatter(m_currency, sendingTransaction.destinations) <<
     ", change address '" << sendingTransaction.changeDestination << '\'' <<
     ", fee " << m_currency.formatAmount(sendingTransaction.fee) <<
     ", mixin " << sendingTransaction.mixIn <<
-    ", unlockTimestamp " << sendingTransaction.unlockTimestamp;
+    ", unlockTimestamp " << sendingTransaction.unlockTimestamp;*/
+
+  std::cout << "makeTransaction" <<
+	  ", from " << Common::makeContainerFormatter(sendingTransaction.sourceAddresses) <<
+	  ", to " << WalletOrderListFormatter(m_currency, sendingTransaction.destinations) <<
+	  ", change address '" << sendingTransaction.changeDestination << '\'' <<
+	  ", fee " << m_currency.formatAmount(sendingTransaction.fee) <<
+	  ", mixin " << sendingTransaction.mixIn <<
+	  ", unlockTimestamp " << sendingTransaction.unlockTimestamp << std::endl;
 
   validateTransactionParameters(sendingTransaction);
   CryptoNote::AccountPublicAddress changeDestination = getChangeDestination(sendingTransaction.changeDestination, sendingTransaction.sourceAddresses);
@@ -1697,7 +1728,8 @@ void WalletGreen::commitTransaction(size_t transactionId) {
     throw std::system_error(ec);
   }
 
-  m_logger(INFO, BRIGHT_WHITE) << "Delayed transaction sent, ID " << transactionId << ", hash " << m_transactions[transactionId].hash;
+ //m_logger(INFO, BRIGHT_WHITE) << "Delayed transaction sent, ID " << transactionId << ", hash " << m_transactions[transactionId].hash;
+  std::cout << "Delayed transaction sent, ID " << transactionId << ", hash " << m_transactions[transactionId].hash << std::endl;
 }
 
 void WalletGreen::rollbackUncommitedTransaction(size_t transactionId) {
@@ -1726,7 +1758,8 @@ void WalletGreen::rollbackUncommitedTransaction(size_t transactionId) {
   removeUnconfirmedTransaction(getObjectHash(m_uncommitedTransactions[transactionId]));
   m_uncommitedTransactions.erase(transactionId);
 
-  m_logger(INFO, BRIGHT_WHITE) << "Delayed transaction rolled back, ID " << transactionId << ", hash " << m_transactions[transactionId].hash;
+  //m_logger(INFO, BRIGHT_WHITE) << "Delayed transaction rolled back, ID " << transactionId << ", hash " << m_transactions[transactionId].hash;
+  std::cout << "Delayed transaction rolled back, ID " << transactionId << ", hash " << m_transactions[transactionId].hash << std::endl;
 }
 
 void WalletGreen::pushBackOutgoingTransfers(size_t txId, const std::vector<WalletTransfer>& destinations) {
@@ -2712,12 +2745,19 @@ void WalletGreen::transactionUpdated(const TransactionInformation& transactionIn
 
   if (isNew) {
     const auto& tx = m_transactions[transactionId];
-    m_logger(INFO, BRIGHT_WHITE) << "New transaction received, ID " << transactionId <<
+   /*m_logger(INFO, BRIGHT_WHITE) << "New transaction received, ID " << transactionId <<
       ", hash " << tx.hash <<
       ", state " << tx.state <<
       ", totalAmount " << m_currency.formatAmount(tx.totalAmount) <<
       ", fee " << m_currency.formatAmount(tx.fee) <<
-      ", transfers: " << TransferListFormatter(m_currency, getTransactionTransfersRange(transactionId));
+      ", transfers: " << TransferListFormatter(m_currency, getTransactionTransfersRange(transactionId));*/
+
+	std::cout << "New transaction received, ID " << transactionId <<
+		", hash " << tx.hash <<
+		", state " << tx.state <<
+		", totalAmount " << m_currency.formatAmount(tx.totalAmount) <<
+		", fee " << m_currency.formatAmount(tx.fee) <<
+		", transfers: " << TransferListFormatter(m_currency, getTransactionTransfersRange(transactionId)) << std::endl;
 
     pushEvent(makeTransactionCreatedEvent(transactionId));
   } else if (updated) {
@@ -2885,11 +2925,19 @@ void WalletGreen::updateBalance(CryptoNote::ITransfersContainer* container) {
       wallet.pendingBalance = pending;
     });
 
-    m_logger(INFO, BRIGHT_WHITE) << "Wallet balance updated, address " << m_currency.accountAddressAsString({ it->spendPublicKey, m_viewPublicKey }) <<
+    /*m_logger(INFO, BRIGHT_WHITE) << "Wallet balance updated, address " << m_currency.accountAddressAsString({ it->spendPublicKey, m_viewPublicKey }) <<
       ", actual " << m_currency.formatAmount(it->actualBalance) <<
-      ", pending " << m_currency.formatAmount(it->pendingBalance);
-    m_logger(INFO, BRIGHT_WHITE) << "Container balance updated, actual " << m_currency.formatAmount(m_actualBalance) <<
-      ", pending " << m_currency.formatAmount(m_pendingBalance);
+      ", pending " << m_currency.formatAmount(it->pendingBalance);*/
+
+	std::cout << "Wallet balance updated, address " << m_currency.accountAddressAsString({ it->spendPublicKey, m_viewPublicKey }) <<
+		", actual " << m_currency.formatAmount(it->actualBalance) <<
+		", pending " << m_currency.formatAmount(it->pendingBalance) << std::endl;
+    
+    /*m_logger(INFO, BRIGHT_WHITE) << "Container balance updated, actual " << m_currency.formatAmount(m_actualBalance) <<
+      ", pending " << m_currency.formatAmount(m_pendingBalance);*/
+
+	std::cout << "Container balance updated, actual " << m_currency.formatAmount(m_actualBalance) <<
+		", pending " << m_currency.formatAmount(m_pendingBalance) << std::endl;
   }
 }
 
@@ -2961,20 +3009,31 @@ size_t WalletGreen::createFusionTransaction(uint64_t threshold, uint16_t mixin,
 
     if (id != WALLET_INVALID_TRANSACTION_ID) {
       auto& tx = m_transactions[id];
-      m_logger(INFO, BRIGHT_WHITE) << "Fusion transaction created and sent, ID " << id <<
+      /*m_logger(INFO, BRIGHT_WHITE) << "Fusion transaction created and sent, ID " << id <<
         ", hash " << m_transactions[id].hash <<
         ", state " << tx.state <<
-        ", transfers: " << TransferListFormatter(m_currency, getTransactionTransfersRange(id));
+        ", transfers: " << TransferListFormatter(m_currency, getTransactionTransfersRange(id));*/
+
+	  std::cout << "Fusion transaction created and sent, ID " << id <<
+		  ", hash " << m_transactions[id].hash <<
+		  ", state " << tx.state <<
+		  ", transfers: " << TransferListFormatter(m_currency, getTransactionTransfersRange(id)) << std::endl;
     }
   });
 
   System::EventLock lk(m_readyEvent);
 
-  m_logger(INFO, BRIGHT_WHITE) << "createFusionTransaction" <<
+  /*m_logger(INFO, BRIGHT_WHITE) << "createFusionTransaction" <<
     ", from " << Common::makeContainerFormatter(sourceAddresses) <<
     ", to '" << destinationAddress << '\'' <<
     ", threshold " << m_currency.formatAmount(threshold) <<
-    ", mixin " << mixin;
+    ", mixin " << mixin;*/
+
+  std::cout << "createFusionTransaction" <<
+	  ", from " << Common::makeContainerFormatter(sourceAddresses) <<
+	  ", to '" << destinationAddress << '\'' <<
+	  ", threshold " << m_currency.formatAmount(threshold) <<
+	  ", mixin " << mixin << std::endl;
 
   throwIfNotInitialized();
   throwIfTrackingMode();
